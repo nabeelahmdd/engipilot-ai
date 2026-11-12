@@ -1,4 +1,4 @@
-"""Alembic migration environment."""
+"""Alembic migration environment for EngiPilot AI."""
 
 import asyncio
 from logging.config import fileConfig
@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from engipilot_ai.core.config import get_settings
 from engipilot_ai.core.db_base import Base
 
-# Load models so they register with Base.metadata.
+# Import all models to register tables in Base.metadata.
 from engipilot_ai.modules.identity.models import user  # noqa: F401
 from engipilot_ai.modules.organizations.models import (  # noqa: F401
     membership as organization_membership,
@@ -22,13 +22,17 @@ from engipilot_ai.modules.projects.models import (  # noqa: F401
 
 config = context.config
 
+# Configure Alembic logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# SQLAlchemy metadata for autogenerate.
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
+    """Generate migration SQL without connecting to DB."""
+
     context.configure(
         url=get_settings().database_url,
         target_metadata=target_metadata,
@@ -42,6 +46,8 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
+    """Run migrations using an active connection."""
+
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
@@ -53,11 +59,15 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    section = dict(config.get_section(config.config_ini_section) or {})
-    section["sqlalchemy.url"] = get_settings().database_url
+    """Connect to PostgreSQL using asyncpg."""
+
+    settings = get_settings()
+
+    configuration = dict(config.get_section(config.config_ini_section) or {})
+    configuration["sqlalchemy.url"] = settings.database_url
 
     engine = async_engine_from_config(
-        section,
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
@@ -69,7 +79,11 @@ async def run_async_migrations() -> None:
         await engine.dispose()
 
 
+def run_migrations_online() -> None:
+    asyncio.run(run_async_migrations())
+
+
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    asyncio.run(run_async_migrations())
+    run_migrations_online()
