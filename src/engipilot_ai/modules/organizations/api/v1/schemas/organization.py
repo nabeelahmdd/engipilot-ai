@@ -2,7 +2,7 @@
 
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class OrganizationCreate(BaseModel):
@@ -21,6 +21,13 @@ class OrganizationCreate(BaseModel):
         max_length=80,
         pattern=r"^[a-z][a-z0-9-]*[a-z0-9]$",
     )
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def normalize_code(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip().lower()
+        return value
 
 
 class OrganizationResponse(BaseModel):

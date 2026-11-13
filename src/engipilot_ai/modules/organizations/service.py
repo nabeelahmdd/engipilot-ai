@@ -33,9 +33,9 @@ class OrganizationService:
         name = name.strip()
         code = code.strip().lower()
 
-        if not name or len(name) > 160:
+        if not 2 <= len(name) <= 160:
             raise InvalidOrganizationData(
-                "Organization name must contain 1-160 characters"
+                "Organization name must contain 2-160 characters"
             )
 
         if not re.fullmatch(
