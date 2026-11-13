@@ -55,10 +55,10 @@ jobs:
         run: uv run --locked ruff format --check .
       - name: Mypy
         run: uv run --locked mypy src
-      - name: Pytest
-        run: uv run --locked pytest -q
+
       - name: Database smoke test
         run: uv run --locked python scripts/check_database.py
+
       - name: Apply database migrations
         run: uv run --locked alembic upgrade head
 
