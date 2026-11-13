@@ -1,4 +1,3 @@
-
 """Shared SQLAlchemy declarative base and abstract model."""
 
 import uuid as uuid_lib

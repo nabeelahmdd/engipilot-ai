@@ -1,6 +1,4 @@
-
 """Register all ORM models for SQLAlchemy and Alembic."""
-
 
 
 def register_models() -> None:
