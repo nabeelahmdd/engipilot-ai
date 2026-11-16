@@ -10,12 +10,15 @@ from starlette.responses import Response
 
 from engipilot_ai.api.health import router as health_router
 from engipilot_ai.core.config import get_settings
-from engipilot_ai.core.database import get_engine
+from engipilot_ai.core.database import get_engine, get_session_factory
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
+
+    get_session_factory.cache_clear()
+
     if get_engine.cache_info().currsize:
         await get_engine().dispose()
         get_engine.cache_clear()
