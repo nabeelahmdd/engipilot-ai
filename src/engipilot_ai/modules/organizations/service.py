@@ -2,6 +2,7 @@
 
 import re
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from engipilot_ai.modules.identity.service import IdentityService
@@ -48,31 +49,57 @@ class OrganizationService:
                 "letters, numbers or hyphens"
             )
 
-        async with session.begin():
-            await IdentityService.require_active_user(
-                session,
-                owner_user_id,
+        try:
+            async with session.begin():
+                await IdentityService.require_active_user(
+                    session,
+                    owner_user_id,
+                )
+
+                existing = await OrganizationRepository.get_by_code(
+                    session,
+                    code,
+                )
+
+                if existing is not None:
+                    raise OrganizationCodeAlreadyExists(
+                        "Organization code already exists"
+                    )
+
+                organization = await OrganizationRepository.create(
+                    session,
+                    name=name,
+                    code=code,
+                    owner_user_id=owner_user_id,
+                )
+
+                await OrganizationRepository.add_admin_membership(
+                    session,
+                    organization_id=organization.id,
+                    user_id=owner_user_id,
+                )
+
+        except IntegrityError as exc:
+            driver_error = exc.orig
+
+            original_error = (
+                driver_error.__cause__ if driver_error is not None else None
             )
 
-            existing = await OrganizationRepository.get_by_code(
-                session,
-                code,
+            is_code_conflict = (
+                getattr(driver_error, "sqlstate", None) == "23505"
+                and getattr(
+                    original_error,
+                    "constraint_name",
+                    None,
+                )
+                == "organizations_code_key"
             )
 
-            if existing is not None:
-                raise OrganizationCodeAlreadyExists("Organization code already exists")
+            if is_code_conflict:
+                raise OrganizationCodeAlreadyExists(
+                    "Organization code already exists"
+                ) from exc
 
-            organization = await OrganizationRepository.create(
-                session,
-                name=name,
-                code=code,
-                owner_user_id=owner_user_id,
-            )
-
-            await OrganizationRepository.add_admin_membership(
-                session,
-                organization_id=organization.id,
-                user_id=owner_user_id,
-            )
-
+            raise
         return organization
