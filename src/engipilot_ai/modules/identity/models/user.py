@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, String, false, true
+from sqlalchemy import Boolean, Integer, String, Text, false, text, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from engipilot_ai.core.db_base import AbstractModel
@@ -47,6 +47,18 @@ class User(AbstractModel):
         Boolean,
         default=False,
         server_default=false(),
+        nullable=False,
+    )
+
+    password_hash: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    auth_version: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        server_default=text("1"),
         nullable=False,
     )
 
