@@ -4,7 +4,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Integer, String, Text, false, text, true
+from sqlalchemy import (
+    Boolean,
+    Index,
+    Integer,
+    String,
+    Text,
+    false,
+    func,
+    text,
+    true,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from engipilot_ai.core.db_base import AbstractModel
@@ -60,6 +70,14 @@ class User(AbstractModel):
         default=1,
         server_default=text("1"),
         nullable=False,
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_users_email_lower",
+            func.lower(email),
+            unique=True,
+        ),
     )
 
     owned_organizations: Mapped[list[Organization]] = relationship(

@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from engipilot_ai.core.config import get_settings
-from engipilot_ai.core.model_registry import register_models
 from engipilot_ai.modules.identity.models.user import User
 from engipilot_ai.modules.organizations.models.membership import (
     OrganizationMembership,
@@ -27,7 +26,6 @@ from engipilot_ai.modules.organizations.service import (
 
 
 async def verify_organization_service() -> None:
-    register_models()
 
     engine = create_async_engine(
         get_settings().database_url,

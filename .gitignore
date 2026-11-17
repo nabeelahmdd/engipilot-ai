@@ -41,3 +41,4 @@ logs/
 artifacts/
 .cache/
 .private/
+.secrets/

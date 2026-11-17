@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from engipilot_ai.core.config import get_settings
-from engipilot_ai.core.model_registry import register_models
 from engipilot_ai.modules.identity.models.user import User
 
 
@@ -18,7 +17,6 @@ class RollbackTest(Exception):
 
 
 async def verify_user_auth_state() -> None:
-    register_models()
 
     engine = create_async_engine(
         get_settings().database_url,
