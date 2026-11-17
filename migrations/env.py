@@ -8,25 +8,17 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import engipilot_ai.models  # noqa: F401
 from engipilot_ai.core.config import get_settings
 from engipilot_ai.core.db_base import Base
 
-# Import all models to register tables in Base.metadata.
-from engipilot_ai.modules.identity.models import user  # noqa: F401
-from engipilot_ai.modules.organizations.models import (  # noqa: F401
-    membership as organization_membership,
-)
-from engipilot_ai.modules.projects.models import (  # noqa: F401
-    membership as project_membership,
-)
-
 config = context.config
 
-# Configure Alembic logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# SQLAlchemy metadata for autogenerate.
+
+# All ORM models have been imported above.
 target_metadata = Base.metadata
 
 
@@ -64,6 +56,7 @@ async def run_async_migrations() -> None:
     settings = get_settings()
 
     configuration = dict(config.get_section(config.config_ini_section) or {})
+
     configuration["sqlalchemy.url"] = settings.database_url
 
     engine = async_engine_from_config(

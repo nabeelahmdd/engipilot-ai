@@ -6,7 +6,6 @@ import uuid
 from sqlalchemy import select
 
 from engipilot_ai.core.database import get_session_factory
-from engipilot_ai.core.model_registry import register_models
 from engipilot_ai.modules.identity.models.user import User
 
 
@@ -15,7 +14,7 @@ class ExpectedRollback(Exception):
 
 
 async def verify_rollback() -> None:
-    register_models()
+
     user_uuid: uuid.UUID | None = None
 
     try:

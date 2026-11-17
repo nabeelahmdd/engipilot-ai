@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from engipilot_ai.core.config import get_settings
-from engipilot_ai.core.model_registry import register_models
 from engipilot_ai.modules.identity.models.user import User
 from engipilot_ai.modules.organizations.models.membership import (
     OrganizationMembership,
@@ -24,7 +23,6 @@ class ForceRollback(Exception):
 
 
 async def verify_repository() -> None:
-    register_models()
 
     # Isolated test engine avoids connection reuse across asyncio.run loops.
     engine = create_async_engine(
