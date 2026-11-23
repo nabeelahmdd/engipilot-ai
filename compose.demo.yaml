@@ -1,0 +1,22 @@
+# Optional Docker smoke test. Not hardened production deployment.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://engipilot:${POSTGRES_PASSWORD:-postgres}@postgres:5432/engipilot
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - api

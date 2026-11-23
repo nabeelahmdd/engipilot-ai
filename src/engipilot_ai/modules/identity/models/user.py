@@ -1,0 +1,69 @@
+"""Global CommercePilot customer/account record."""
+
+from sqlalchemy import (
+    Boolean,
+    Index,
+    Integer,
+    String,
+    Text,
+    false,
+    func,
+    text,
+    true,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+
+from engipilot_ai.core.db_base import AbstractModel
+
+
+class User(AbstractModel):
+    __tablename__ = "users"
+
+    mobile: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
+
+    email: Mapped[str | None] = mapped_column(String(320), unique=True, nullable=True)
+
+    first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default=true(),
+        nullable=False,
+    )
+
+    is_mobile_verified: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=false(),
+        nullable=False,
+    )
+
+    is_email_verified: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=false(),
+        nullable=False,
+    )
+
+    password_hash: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    auth_version: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        server_default=text("1"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_users_email_lower",
+            func.lower(email),
+            unique=True,
+        ),
+    )

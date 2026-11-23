@@ -1,0 +1,20 @@
+# Local development ONLY. Never expose this service publicly.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: engipilot
+      POSTGRES_USER: engipilot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - engipilot_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U engipilot -d engipilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  engipilot_pgdata:

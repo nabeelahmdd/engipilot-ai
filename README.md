@@ -1,76 +1,65 @@
 # CommercePilot AI
 
-**Status:** repository pivot in progress. This branch resets the previous EngiPilot AI code-review app; it does **not** claim a working e-commerce backend or AI agent yet.
+**Backend-first E-commerce & Agentic AI Engineering Capstone**
 
-CommercePilot AI is a **backend-first e-commerce and agentic AI engineering project**. We will manually implement a real e-commerce backend first, then add LangChain, LangGraph, multi-agent orchestration, MCP, RAG, evaluation, observability and production controls.
+CommercePilot AI is a modular Python/FastAPI e-commerce application that will progressively add LangChain, LangGraph, MCP, RAG, multi-agent orchestration, evaluation, observability and production safety.
 
-## Why the pivot?
+> **Status:** Existing FastAPI, PostgreSQL, authentication, React and CI foundations are present. The catalog, cart, orders and AI features are **planned, not implemented**.
 
-We are repurposing the existing Git repository, keeping its commit history, but removing the old code-review, organization/project, authentication, React and deployment scaffold from the proposed branch. The previous application remains recoverable in Git history. Nothing in this PR merges automatically.
+## Our decision
 
-## Locked goals
+Reuse the existing architecture rather than rebuilding it. The previous engineering-project-specific organization/project modules are retired in this migration; identity/authentication, SQLAlchemy, Alembic history, API, tests, React, Docker, CI and UV dependency management remain.
 
-1. Learn by building every layer manually, step by step, using `uv` and Python 3.12.
-2. Start with FastAPI + Pydantic + PostgreSQL + SQLAlchemy/Alembic, with verified CRUD, business rules and tests.
-3. Support catalog search, customers, carts and **simulated** orders/returns. No real money movement.
-4. Introduce AI via domain tools so agents **never** bypass application authorization or business logic.
-5. Demonstrate LangChain, LangGraph, MCP, RAG, memory, HITL, multi-agent routing, evaluations, tracing, reliability and security in one coherent demo.
-6. Record each completed step, failing case, architecture decision and exact next task.
+**Naming:** The product and user-facing branding is **CommercePilot AI**. For compatibility, the existing GitHub repo is still `nabeelahmdd/engipilot-ai` and the Python import package is still `engipilot_ai`. Technical identifiers (Python imports, JWT audience/issuer defaults, Docker names, database names and package lockfile) are intentionally retained until a coordinated rename is justified. Do not confuse them with product branding.
 
-## Planned stack (not installed yet)
+## Goals
 
-- **Backend:** Python 3.12, FastAPI, Pydantic, PostgreSQL, SQLAlchemy 2, Alembic
-- **Dependency management:** uv, `pyproject.toml`, committed `uv.lock` once locally generated
-- **Testing:** pytest, Ruff, mypy, httpx
-- **AI:** LangChain, LangGraph, MCP Python SDK, vector retrieval, evals and tracing
-- **Optional later:** Redis/background jobs, Docker, React UI
-- **External data:** DummyJSON only as an optional *seed* or fixture. Our backend database owns persistent products/carts/orders.
+1. Build a real backend: customer identity, catalog, persistent cart, inventory and **simulated** orders.
+2. Provide clean, authorized domain services consumed by REST endpoints and future AI tools.
+3. Implement a complete production-oriented agentic workflow with LangChain, LangGraph, MCP, RAG, memory, multi-agent and HITL.
+4. Evaluate tool choice, retrieval, reasoning trajectories, latency, cost and resilience.
+5. Build everything incrementally, **manually**, with `uv` and evidence-based tests.
 
-## Roadmap at a glance
+No live payment processing, real refunds or fulfillment actions are in scope.
 
-| Phase | Outcome |
+## Existing technology
+
+Python 3.12, uv + locked dependencies, FastAPI, async SQLAlchemy, PostgreSQL 17, Alembic, Pydantic Settings, JWT/password/session auth utilities, React + Vite, Docker/Compose, pytest, Ruff, mypy, GitHub Actions.
+
+## Roadmap
+
+| Phase | Capability |
 |---|---|
-| B0 — Repository reset | New name, docs, minimal Python package (this PR) |
-| B1 — API foundation | FastAPI app factory, health and config, tests |
-| B2 — Data foundation | PostgreSQL, SQLAlchemy, Alembic, repository/service boundaries |
-| B3 — Catalog | Products/categories/search/filter/pagination |
-| B4 — Cart | Customer-scoped persistent cart, deterministic pricing |
-| B5 — Orders | Simulated checkout/order state transitions, inventory guardrails |
-| B6 — Authorization | Identity and ownership checks, auditability |
-| A1 — LangChain | LLM configuration, structured outputs, validated tools |
-| A2 — LangGraph | State, graph orchestration, checkpoints and HITL |
-| A3 — MCP | Discover and call the *same* backend operations via MCP |
-| A4 — RAG | Ingestion, vector/hybrid retrieval, reranking, citations |
-| A5 — Multi-agent | Router/supervisor, specialized agents, controlled handoffs |
-| A6 — Production AI | Evals, trace observability, reliability, security, cost control |
-| F — Capstone | End-to-end acceptance scenarios, documentation and reproducibility |
+| M0 | Migrate branding and retire unrelated engineering domains with a guarded DB migration |
+| B1 | Verify baseline, auth, tests, PostgreSQL migration and CI |
+| B2 | Products, categories, pricing, inventory and search APIs |
+| B3 | Customer-owned carts and transactions |
+| B4 | Simulated order creation and status |
+| B5 | Authorization, audits and concurrency tests |
+| A1 | LangChain LLM + typed tool adapters |
+| A2 | LangGraph workflow, checkpoints, HITL |
+| A3 | MCP client/server |
+| A4 | RAG/advanced retrieval and cited policies |
+| A5 | Multi-agent supervisor, specialist handoffs |
+| A6 | Memory, evals, observability, model routing, production controls |
+| F | End-to-end capstone and reproducible demonstration |
 
-See [MASTER_PLAN](docs/MASTER_PLAN.md), [ARCHITECTURE](docs/ARCHITECTURE.md) and [STATUS](docs/STATUS.md).
+Read [roadmap](docs/commercepilot/MASTER_PLAN.md), [architecture](docs/commercepilot/ARCHITECTURE.md), [status](docs/commercepilot/STATUS.md), and [handoff](docs/commercepilot/HANDOFF.md).
 
-## Current repository structure
-
-```text
-src/commercepilot_ai/    # New Python package, intentionally minimal
-docs/                    # Source of truth for roadmap and decisions
-pyproject.toml            # UV project metadata; dependencies deliberately staged
-.env.example              # Non-secret configuration examples
-```
-
-## Local first step (after reviewing and merging this PR)
+## Existing local setup
 
 ```bash
-git clone https://github.com/nabeelahmdd/commercepilot-ai.git
-cd commercepilot-ai
-uv sync
-uv run python -c "import commercepilot_ai; print('package import OK')"
+git clone https://github.com/nabeelahmdd/engipilot-ai.git
+cd engipilot-ai
+uv sync --locked
+docker compose up -d postgres
+uv run --locked alembic upgrade head
+uv run --locked pytest -q
+uv run --locked ruff check .
 ```
 
-**Important:** The GitHub repository URL changes to `commercepilot-ai` **only after** the owner manually renames it under GitHub Settings → General → Repository name. Until then use the existing `engipilot-ai` URL. GitHub repository renaming cannot be performed by this PR.
+**Migration warning:** The new Alembic revision intentionally refuses to drop populated legacy organization/project tables. If it blocks, **do not clear database volumes**; inspect and back up data before deciding on the safe conversion. Existing PostgreSQL names are unchanged for compatibility.
 
-No API endpoint is implemented in this repository-reset PR.
+API: `http://127.0.0.1:8000`; Web: `http://127.0.0.1:5173` using `make api` and `make web` after setup.
 
-## Our development rule
-
-**One concept → one implementation → one test → one green check → one commit → update `docs/STATUS.md`.** No AI dependencies until the backend feature gates pass.
-
-See [SETUP_GUIDE](docs/SETUP_GUIDE.md) and [HANDOFF](docs/HANDOFF.md).
+**Learning workflow:** one module → one explained change → tests → PR → update `docs/commercepilot/STATUS.md`. No ZIP scaffolds, no premature mass package installation.
