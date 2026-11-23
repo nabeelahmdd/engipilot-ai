@@ -2,7 +2,7 @@
 
 **Version:** 0.1.0  
 **Phase:** B0 — Repository pivot  
-**State:** PR preparation; not merged  
+**State:** Draft PR #9 opened; not merged  
 **Working product:** None yet. Old EngiPilot code is proposed for removal, not deleted from Git history.
 
 ## Evidence / progress
@@ -10,8 +10,8 @@
 | Check | Status | Evidence |
 |---|---|---|
 | Read original repository and open PRs | Done | `main` reviewed before reset |
-| Branch containing new identity/docs | In progress | `chore/commercepilot-backend-first-reboot` |
-| PR opened | Pending |
+| Branch containing new identity/docs | Done | `chore/commercepilot-backend-first-reboot` |
+| PR opened | Done | https://github.com/nabeelahmdd/engipilot-ai/pull/9 |
 | PR review and merge | Pending (human decision) |
 | GitHub repository rename | Pending (requires Settings → General) |
 | Local `uv sync` and package import | Not run |
