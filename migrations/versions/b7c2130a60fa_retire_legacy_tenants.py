@@ -87,7 +87,9 @@ def downgrade() -> None:
         "organization_memberships",
         sa.Column("organization_id", sa.BigInteger(), nullable=False),
         sa.Column("user_id", sa.BigInteger(), nullable=False),
-        sa.Column("role", sa.String(length=20), server_default="member", nullable=False),
+        sa.Column(
+            "role", sa.String(length=20), server_default="member", nullable=False
+        ),
         *_common_columns(),
         sa.CheckConstraint("role IN ('admin', 'member')", name="ck_org_member_role"),
         sa.ForeignKeyConstraint(
