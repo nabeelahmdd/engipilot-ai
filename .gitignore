@@ -1,44 +1,26 @@
-# Python: interpreter, virtual env, build outputs
+# Virtual environments / Python
+.venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
-.venv/
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-.coverage
-.coverage.*
-htmlcov/
 build/
 dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Never track developer secrets or production credentials
+# Local secrets / data
 .env
 .env.*
 !.env.example
-*.pem
-*.key
-*.p12
-*.pfx
-*id_rsa*
-*id_ed25519*
+*.sqlite3
+*.db
+data/local/
+logs/
 
-# Node/Vite
-node_modules/
-apps/web/dist/
-apps/web/coverage/
-*.tsbuildinfo
-
-# Editor/OS
+# OS / editors
 .DS_Store
 .idea/
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-
-# Local working data, not source
-logs/
-artifacts/
-.cache/
-.private/
-.secrets/
+.vscode/

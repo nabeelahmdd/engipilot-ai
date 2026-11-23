@@ -1,132 +1,76 @@
-# EngiPilot AI
+# CommercePilot AI
 
-A **web-first, multi-tenant AI engineering platform** built one complete feature module at a time.
+**Status:** repository pivot in progress. This branch resets the previous EngiPilot AI code-review app; it does **not** claim a working e-commerce backend or AI agent yet.
 
-> Status: **Day 1 foundation only**. Organization signup, projects, access control, GitHub App connection, and AI PR reviews are **not implemented yet**.
+CommercePilot AI is a **backend-first e-commerce and agentic AI engineering project**. We will manually implement a real e-commerce backend first, then add LangChain, LangGraph, multi-agent orchestration, MCP, RAG, evaluation, observability and production controls.
 
-## Technologies
+## Why the pivot?
 
-- Backend: Python 3.12, FastAPI, Pydantic Settings, SQLAlchemy 2, asyncpg, PostgreSQL 17.
-- Frontend: React 19, TypeScript, Vite, ESLint.
-- Developer tools: uv, pytest, Ruff, mypy, npm, Docker, GitHub Actions.
-- Build: Python package using PEP 621 `pyproject.toml`, hatchling, `src/` layout.
+We are repurposing the existing Git repository, keeping its commit history, but removing the old code-review, organization/project, authentication, React and deployment scaffold from the proposed branch. The previous application remains recoverable in Git history. Nothing in this PR merges automatically.
 
-## 1. macOS requirements
+## Locked goals
 
-Install Git, **uv (0.13.7 recommended, to match CI/Docker)**, Node.js 22.12+ (prefer Node 22 LTS), and Docker Desktop (including Compose). On Apple Silicon use the native ARM64 versions where available. VS Code is optional.
+1. Learn by building every layer manually, step by step, using `uv` and Python 3.12.
+2. Start with FastAPI + Pydantic + PostgreSQL + SQLAlchemy/Alembic, with verified CRUD, business rules and tests.
+3. Support catalog search, customers, carts and **simulated** orders/returns. No real money movement.
+4. Introduce AI via domain tools so agents **never** bypass application authorization or business logic.
+5. Demonstrate LangChain, LangGraph, MCP, RAG, memory, HITL, multi-agent routing, evaluations, tracing, reliability and security in one coherent demo.
+6. Record each completed step, failing case, architecture decision and exact next task.
 
-Verify prerequisites:
+## Planned stack (not installed yet)
 
-```bash
-git --version
-uv --version
-node --version
-npm --version
-docker compose version
+- **Backend:** Python 3.12, FastAPI, Pydantic, PostgreSQL, SQLAlchemy 2, Alembic
+- **Dependency management:** uv, `pyproject.toml`, committed `uv.lock` once locally generated
+- **Testing:** pytest, Ruff, mypy, httpx
+- **AI:** LangChain, LangGraph, MCP Python SDK, vector retrieval, evals and tracing
+- **Optional later:** Redis/background jobs, Docker, React UI
+- **External data:** DummyJSON only as an optional *seed* or fixture. Our backend database owns persistent products/carts/orders.
+
+## Roadmap at a glance
+
+| Phase | Outcome |
+|---|---|
+| B0 — Repository reset | New name, docs, minimal Python package (this PR) |
+| B1 — API foundation | FastAPI app factory, health and config, tests |
+| B2 — Data foundation | PostgreSQL, SQLAlchemy, Alembic, repository/service boundaries |
+| B3 — Catalog | Products/categories/search/filter/pagination |
+| B4 — Cart | Customer-scoped persistent cart, deterministic pricing |
+| B5 — Orders | Simulated checkout/order state transitions, inventory guardrails |
+| B6 — Authorization | Identity and ownership checks, auditability |
+| A1 — LangChain | LLM configuration, structured outputs, validated tools |
+| A2 — LangGraph | State, graph orchestration, checkpoints and HITL |
+| A3 — MCP | Discover and call the *same* backend operations via MCP |
+| A4 — RAG | Ingestion, vector/hybrid retrieval, reranking, citations |
+| A5 — Multi-agent | Router/supervisor, specialized agents, controlled handoffs |
+| A6 — Production AI | Evals, trace observability, reliability, security, cost control |
+| F — Capstone | End-to-end acceptance scenarios, documentation and reproducibility |
+
+See [MASTER_PLAN](docs/MASTER_PLAN.md), [ARCHITECTURE](docs/ARCHITECTURE.md) and [STATUS](docs/STATUS.md).
+
+## Current repository structure
+
+```text
+src/commercepilot_ai/    # New Python package, intentionally minimal
+docs/                    # Source of truth for roadmap and decisions
+pyproject.toml            # UV project metadata; dependencies deliberately staged
+.env.example              # Non-secret configuration examples
 ```
 
-## 2. Setup from ZIP
+## Local first step (after reviewing and merging this PR)
 
 ```bash
-unzip engipilot-ai-v0-foundation.zip
-cd engipilot-ai-v0-foundation
-bash scripts/bootstrap.sh
-docker compose up -d postgres
+git clone https://github.com/nabeelahmdd/commercepilot-ai.git
+cd commercepilot-ai
+uv sync
+uv run python -c "import commercepilot_ai; print('package import OK')"
 ```
 
-Bootstrap copies `.env.example` to ignored `.env`, creates `uv.lock` and `apps/web/package-lock.json` **using your real package registries**, installs dependencies and runs checks. Both lockfiles **must be committed before opening a PR**. The ZIP does not contain fabricated locks because the packaging environment could not access package registries.
+**Important:** The GitHub repository URL changes to `commercepilot-ai` **only after** the owner manually renames it under GitHub Settings → General → Repository name. Until then use the existing `engipilot-ai` URL. GitHub repository renaming cannot be performed by this PR.
 
-## 3. Run locally (two terminals)
+No API endpoint is implemented in this repository-reset PR.
 
-```bash
-# Terminal 1 - backend, in repository root
-make api
-# Terminal 2 - frontend, in repository root
-make web
-```
+## Our development rule
 
-- Web: http://127.0.0.1:5173
-- API health: http://127.0.0.1:8000/api/v1/health
-- DB readiness: http://127.0.0.1:8000/api/v1/ready
-- Swagger UI: http://127.0.0.1:8000/docs (local/test only)
+**One concept → one implementation → one test → one green check → one commit → update `docs/STATUS.md`.** No AI dependencies until the backend feature gates pass.
 
-## 4. Run checks
-
-```bash
-make check
-uv run --locked pytest -q
-uv run --locked mypy src
-cd apps/web && npm run build
-```
-
-**What is checked?** Python formatting/lint/typechecks, backend tests, frontend lint/typecheck/build. GitHub Actions additionally starts PostgreSQL, performs a database smoke test and builds Docker images.
-
-## 5. Optional full Docker demo
-
-```bash
-docker compose -f compose.yaml -f compose.demo.yaml up --build -d
-# http://127.0.0.1:8080
-docker compose -f compose.yaml -f compose.demo.yaml down
-```
-
-Docker demo is for local smoke tests. It is not an approved production deployment or a substitute for TLS, secure identity, managed secrets and infrastructure hardening.
-
-## 6. Git and GitHub Actions
-
-**Git setup:**
-
-```bash
-git init -b main
-git status --short
-git add .
-git commit -m "chore(repo): bootstrap Python and React foundations"
-```
-
-Only run this **after** `bash scripts/bootstrap.sh` succeeds and both lockfiles exist. `.env`, `.venv`, and `node_modules` are ignored. Create an empty private repository on GitHub, then add its remote and push:
-
-```bash
-git remote add origin git@github.com:YOUR_USER/engipilot-ai.git
-git push -u origin main
-```
-
-After initial bootstrap, do **not** create all feature branches at once. Start each ticket from up-to-date `main`, develop/test, open a PR, merge and delete the branch. Example:
-
-```bash
-git switch main && git pull --ff-only origin main
-git switch -c feat/ENG-005-org-project-models
-# implement real changes and tests
-make check
-git add src/ tests/ docs/ pyproject.toml uv.lock
-git diff --cached --check
-git commit -m "feat(organizations): add organization and project schemas"
-git push -u origin feat/ENG-005-org-project-models
-```
-
-`ENG-005` is a **future task**; do not run the example commit until the code exists. Pull requests trigger CI automatically.
-
-**Documentation:**
-- [GitHub Actions, CI/CD walkthrough](docs/GITHUB_ACTIONS_GUIDE.md)
-- [File-by-file explanation](docs/FILE_BY_FILE_GUIDE.md)
-- [Git workflow](docs/GIT_WORKFLOW.md)
-- [V0 architecture](docs/architecture/V0.md)
-
-## 7. Release tags and containers
-
-After approved tests pass and `main` is updated:
-
-```bash
-git tag -a v0.0.1 -m "V0 foundation"
-git push origin v0.0.1
-```
-
-`.github/workflows/release.yml` reruns quality checks and publishes versioned API/web images to GHCR. **No production deployment occurs.** The repository needs Actions and package publishing enabled; see [CI/CD guide](docs/GITHUB_ACTIONS_GUIDE.md).
-
-## 8. Long-term incremental roadmap
-
-- V0: multi-tenant organization/project foundations, approved Git integrations, **web-based AI PR review**.
-- V1: codebase-aware RAG and AI chat.
-- V2: AI test generation and sandbox validation.
-- V3: durable agent workflows/MCP tools.
-- V4+: governance, SDKs, more engineering agents and observability.
-
-Private source code must never be sent to unapproved AI providers. The initial skeleton does not make any external AI calls.
+See [SETUP_GUIDE](docs/SETUP_GUIDE.md) and [HANDOFF](docs/HANDOFF.md).
