@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     )
     email_outbox_key: SecretStr | None = None
 
+    smtp_host: str = "127.0.0.1"
+    smtp_port: int = Field(default=1025, ge=1, le=65535)
+    smtp_from_address: str = "no-reply@commercepilot.local"
+
 
 @lru_cache
 def get_settings() -> Settings:

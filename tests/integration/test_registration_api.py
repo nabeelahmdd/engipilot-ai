@@ -20,6 +20,9 @@ from engipilot_ai.modules.identity.email_payload import (
 from engipilot_ai.modules.identity.models.email_outbox import EmailOutbox
 from engipilot_ai.modules.identity.models.one_time_token import OneTimeToken
 from engipilot_ai.modules.identity.models.user import User
+from engipilot_ai.modules.identity.services.email_dispatcher import (
+    dispatch_one,
+)
 from engipilot_ai.modules.identity.tokens import digest_secret
 
 
@@ -151,6 +154,34 @@ async def verify_registration_api() -> None:
                     # Registration must never reveal the token.
                     assert raw_token not in response.text
 
+                fake_sender = FakeEmailSender()
+
+                processed = await dispatch_one(
+                    sender=fake_sender,
+                    session_factory=factory,
+                )
+
+                assert processed is True
+                assert len(fake_sender.messages) == 1
+
+                recipient, subject, body = fake_sender.messages[0]
+
+                assert recipient == email
+                assert "Verify" in subject
+                assert raw_token in body
+
+                async with factory() as session:
+                    sent_email = await session.get(
+                        EmailOutbox,
+                        outbox.id,
+                    )
+
+                    assert sent_email is not None
+                    assert sent_email.status == "sent"
+                    assert sent_email.sent_at is not None
+                    assert sent_email.attempt_count == 1
+                    assert sent_email.locked_until is None
+
             finally:
                 app.dependency_overrides.pop(get_db_session, None)
                 await transaction.rollback()
@@ -161,3 +192,17 @@ async def verify_registration_api() -> None:
 
 def test_registration_api_database_flow() -> None:
     asyncio.run(verify_registration_api())
+
+
+class FakeEmailSender:
+    def __init__(self) -> None:
+        self.messages: list[tuple[str, str, str]] = []
+
+    async def send(
+        self,
+        *,
+        recipient: str,
+        subject: str,
+        body: str,
+    ) -> None:
+        self.messages.append((recipient, subject, body))

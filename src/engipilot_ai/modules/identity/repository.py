@@ -1,9 +1,9 @@
 """Database operations for identity and authentication."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from engipilot_ai.modules.identity.models.auth_session import AuthSession
@@ -260,3 +260,98 @@ class IdentityRepository:
         await session.flush()
 
         return record
+
+    @staticmethod
+    async def claim_next_email(
+        session: AsyncSession,
+        now: datetime,
+    ) -> EmailOutbox | None:
+        """Claim one due email without blocking other workers."""
+
+        # Finalize messages abandoned after the last allowed attempt.
+        await session.execute(
+            update(EmailOutbox)
+            .where(
+                EmailOutbox.status == "processing",
+                EmailOutbox.locked_until <= now,
+                EmailOutbox.attempt_count >= 5,
+            )
+            .values(status="failed", locked_until=None)
+        )
+
+        statement = (
+            select(EmailOutbox)
+            .where(
+                EmailOutbox.attempt_count < 5,
+                or_(
+                    and_(
+                        EmailOutbox.status == "pending",
+                        EmailOutbox.available_at <= now,
+                    ),
+                    and_(
+                        EmailOutbox.status == "processing",
+                        EmailOutbox.locked_until <= now,
+                    ),
+                ),
+            )
+            .order_by(
+                EmailOutbox.available_at,
+                EmailOutbox.id,
+            )
+            .with_for_update(skip_locked=True)
+            .limit(1)
+        )
+
+        record = await session.scalar(statement)
+
+        if record is None:
+            return None
+
+        record.status = "processing"
+        record.attempt_count += 1
+        record.locked_until = now + timedelta(seconds=120)
+
+        await session.flush()
+        return record
+
+    @staticmethod
+    async def finish_email(
+        session: AsyncSession,
+        *,
+        email_id: int,
+        lease_until: datetime,
+        attempt_count: int,
+        success: bool,
+    ) -> bool:
+        """Acknowledge only the current lease owner."""
+
+        now = datetime.now(lease_until.tzinfo)
+
+        statement = update(EmailOutbox).where(
+            EmailOutbox.id == email_id,
+            EmailOutbox.status == "processing",
+            EmailOutbox.locked_until == lease_until,
+        )
+
+        if success:
+            statement = statement.values(
+                status="sent",
+                sent_at=now,
+                locked_until=None,
+            )
+        elif attempt_count >= 5:
+            statement = statement.values(
+                status="failed",
+                locked_until=None,
+            )
+        else:
+            delay = min(60 * (2 ** (attempt_count - 1)), 3600)
+
+            statement = statement.values(
+                status="pending",
+                available_at=now + timedelta(seconds=delay),
+                locked_until=None,
+            )
+
+        result = await session.scalar(statement.returning(EmailOutbox.id))
+        return result is not None
