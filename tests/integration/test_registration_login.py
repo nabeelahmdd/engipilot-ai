@@ -26,6 +26,10 @@ from engipilot_ai.modules.identity.registration_service import (
 )
 from engipilot_ai.modules.identity.repository import IdentityRepository
 from engipilot_ai.modules.identity.tokens import digest_secret
+from engipilot_ai.modules.identity.verification_service import (
+    EmailVerificationService,
+    InvalidVerificationToken,
+)
 
 
 async def verify_registration_and_login() -> None:
@@ -102,7 +106,49 @@ async def verify_registration_and_login() -> None:
                             registered.user_uuid,
                         )
                         assert user is not None
-                        user.is_email_verified = True
+
+                # 4. Verify email using the real verification service.
+                async with factory() as session:
+                    verified_uuid = await EmailVerificationService.verify_email(
+                        session,
+                        token=registered.verification_secret,
+                    )
+
+                assert verified_uuid == registered.user_uuid
+
+                # 4a. The token must be single-use.
+                async with factory() as session:
+                    with pytest.raises(InvalidVerificationToken):
+                        await EmailVerificationService.verify_email(
+                            session,
+                            token=registered.verification_secret,
+                        )
+
+                # 4b. Invalid token must also be rejected.
+                async with factory() as session:
+                    with pytest.raises(InvalidVerificationToken):
+                        await EmailVerificationService.verify_email(
+                            session,
+                            token="invalid-verification-token",
+                        )
+
+                # 4c. Verification and consumption were persisted.
+                async with factory() as session:
+                    user = await IdentityRepository.get_user_by_uuid(
+                        session,
+                        registered.user_uuid,
+                    )
+                    assert user is not None
+                    assert user.is_email_verified is True
+
+                    verification = await session.scalar(
+                        select(OneTimeToken).where(
+                            OneTimeToken.user_id == user.id,
+                            OneTimeToken.purpose == "verify_email",
+                        )
+                    )
+                    assert verification is not None
+                    assert verification.consumed_at is not None
 
                 # 5. Invalid credentials must fail.
                 async with factory() as session:

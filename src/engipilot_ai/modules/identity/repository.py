@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from engipilot_ai.modules.identity.models.auth_session import AuthSession
@@ -157,3 +157,82 @@ class IdentityRepository:
             .with_for_update()
         )
         return await session.scalar(statement)
+
+    @staticmethod
+    async def get_verification_user_for_update(
+        session: AsyncSession,
+        token_hash: str,
+    ) -> User | None:
+        """Lock the account associated with an email verification token."""
+        statement = (
+            select(User)
+            .join(OneTimeToken, OneTimeToken.user_id == User.id)
+            .where(
+                OneTimeToken.token_hash == token_hash,
+                OneTimeToken.purpose == "verify_email",
+            )
+            .with_for_update(of=User)
+            .execution_options(populate_existing=True)
+        )
+        return await session.scalar(statement)
+
+    @staticmethod
+    async def get_verification_token_for_update(
+        session: AsyncSession,
+        *,
+        token_hash: str,
+        user_id: int,
+    ) -> OneTimeToken | None:
+        """Lock and refresh the exact verification-token row."""
+        statement = (
+            select(OneTimeToken)
+            .where(
+                OneTimeToken.token_hash == token_hash,
+                OneTimeToken.user_id == user_id,
+                OneTimeToken.purpose == "verify_email",
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return await session.scalar(statement)
+
+    @staticmethod
+    async def get_latest_email_verification_token(
+        session: AsyncSession,
+        *,
+        user_id: int,
+    ) -> OneTimeToken | None:
+        """Find the most recently issued email verification token."""
+        statement = (
+            select(OneTimeToken)
+            .where(
+                OneTimeToken.user_id == user_id,
+                OneTimeToken.purpose == "verify_email",
+            )
+            .order_by(
+                OneTimeToken.created_at.desc(),
+                OneTimeToken.id.desc(),
+            )
+            .limit(1)
+        )
+        return await session.scalar(statement)
+
+    @staticmethod
+    async def expire_active_email_verification_tokens(
+        session: AsyncSession,
+        *,
+        user_id: int,
+        now: datetime,
+    ) -> None:
+        """Invalidate unconsumed, active email verification tokens."""
+        statement = (
+            update(OneTimeToken)
+            .where(
+                OneTimeToken.user_id == user_id,
+                OneTimeToken.purpose == "verify_email",
+                OneTimeToken.consumed_at.is_(None),
+                OneTimeToken.expires_at > now,
+            )
+            .values(expires_at=now)
+        )
+        await session.execute(statement)

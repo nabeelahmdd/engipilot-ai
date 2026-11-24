@@ -30,3 +30,12 @@ check:
 images:
 	docker build -f Dockerfile.api -t engipilot-api:local .
 	docker build -f Dockerfile.web -t engipilot-web:local .
+
+
+.PHONY: fix
+
+fix:
+	uv run --locked ruff format .
+	uv run --locked ruff check --fix .
+	uv run --locked ruff format .
+
