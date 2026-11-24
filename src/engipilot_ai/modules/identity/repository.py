@@ -7,6 +7,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from engipilot_ai.modules.identity.models.auth_session import AuthSession
+from engipilot_ai.modules.identity.models.email_outbox import EmailOutbox
 from engipilot_ai.modules.identity.models.one_time_token import OneTimeToken
 from engipilot_ai.modules.identity.models.refresh_credential import (
     RefreshCredential,
@@ -236,3 +237,26 @@ class IdentityRepository:
             .values(expires_at=now)
         )
         await session.execute(statement)
+
+    @staticmethod
+    async def create_email_outbox(
+        session: AsyncSession,
+        *,
+        user_id: int,
+        recipient_email: str,
+        template: str,
+        encrypted_payload: bytes,
+    ) -> EmailOutbox:
+        """Queue an encrypted email inside the caller's transaction."""
+        record = EmailOutbox(
+            user_id=user_id,
+            recipient_email=recipient_email,
+            template=template,
+            encrypted_payload=encrypted_payload,
+            status="pending",
+        )
+
+        session.add(record)
+        await session.flush()
+
+        return record

@@ -14,8 +14,13 @@ from sqlalchemy.pool import NullPool
 from engipilot_ai.core.config import get_settings
 from engipilot_ai.core.database import get_db_session
 from engipilot_ai.main import app
+from engipilot_ai.modules.identity.email_payload import (
+    get_email_payload_cipher,
+)
+from engipilot_ai.modules.identity.models.email_outbox import EmailOutbox
 from engipilot_ai.modules.identity.models.one_time_token import OneTimeToken
 from engipilot_ai.modules.identity.models.user import User
+from engipilot_ai.modules.identity.tokens import digest_secret
 
 
 async def verify_registration_api() -> None:
@@ -117,6 +122,34 @@ async def verify_registration_api() -> None:
                     assert token is not None
                     assert len(token.token_hash) == 64
                     assert token.consumed_at is None
+
+                    # 5. Registration also queues the email atomically.
+                    outbox = await session.scalar(
+                        select(EmailOutbox).where(
+                            EmailOutbox.user_id == user.id,
+                            EmailOutbox.template == "verify_email",
+                        )
+                    )
+
+                    assert outbox is not None
+                    assert outbox.recipient_email == email
+                    assert outbox.status == "pending"
+                    assert outbox.attempt_count == 0
+                    assert outbox.sent_at is None
+
+                    # The raw token must not be stored as plaintext.
+                    raw_token = get_email_payload_cipher().decrypt_token(
+                        outbox.encrypted_payload
+                    )
+
+                    assert raw_token.encode() not in outbox.encrypted_payload
+
+                    # The encrypted email token matches the token
+                    # that will later be validated by verify-email.
+                    assert digest_secret(raw_token) == token.token_hash
+
+                    # Registration must never reveal the token.
+                    assert raw_token not in response.text
 
             finally:
                 app.dependency_overrides.pop(get_db_session, None)

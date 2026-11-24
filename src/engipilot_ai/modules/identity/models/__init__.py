@@ -7,9 +7,12 @@ from engipilot_ai.modules.identity.models.refresh_credential import (
 )
 from engipilot_ai.modules.identity.models.user import User
 
+from .email_outbox import EmailOutbox
+
 __all__ = [
     "User",
     "AuthSession",
     "RefreshCredential",
     "OneTimeToken",
+    "EmailOutbox",
 ]

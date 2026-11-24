@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -46,6 +46,7 @@ class Settings(BaseSettings):
         ge=1,
         le=72,
     )
+    email_outbox_key: SecretStr | None = None
 
 
 @lru_cache

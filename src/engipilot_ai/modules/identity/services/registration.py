@@ -9,6 +9,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from engipilot_ai.core.config import get_settings
+from engipilot_ai.modules.identity.email_payload import (
+    get_email_payload_cipher,
+)
 from engipilot_ai.modules.identity.passwords import (
     hash_password_async,
     validate_new_password,
@@ -121,6 +124,10 @@ class RegistrationService:
         verification_secret = random_secret()
         verification_hash = digest_secret(verification_secret)
 
+        encrypted_payload = get_email_payload_cipher().encrypt_token(
+            verification_secret
+        )
+
         expires_at = utcnow() + timedelta(hours=get_settings().email_verification_hours)
 
         try:
@@ -147,6 +154,14 @@ class RegistrationService:
                     purpose="verify_email",
                     token_hash=verification_hash,
                     expires_at=expires_at,
+                )
+
+                await IdentityRepository.create_email_outbox(
+                    session,
+                    user_id=user.id,
+                    recipient_email=normalized_email,
+                    template="verify_email",
+                    encrypted_payload=encrypted_payload,
                 )
 
                 user_uuid = user.uuid
