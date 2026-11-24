@@ -10,26 +10,26 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from engipilot_ai.core.config import get_settings
-from engipilot_ai.modules.identity.login_service import (
-    AccountDisabled,
-    EmailNotVerified,
-    InvalidCredentials,
-    LoginService,
-)
 from engipilot_ai.modules.identity.models.auth_session import AuthSession
 from engipilot_ai.modules.identity.models.one_time_token import OneTimeToken
 from engipilot_ai.modules.identity.models.refresh_credential import (
     RefreshCredential,
 )
-from engipilot_ai.modules.identity.registration_service import (
+from engipilot_ai.modules.identity.repository import IdentityRepository
+from engipilot_ai.modules.identity.services.login import (
+    AccountDisabled,
+    EmailNotVerified,
+    InvalidCredentials,
+    LoginService,
+)
+from engipilot_ai.modules.identity.services.registration import (
     RegistrationService,
 )
-from engipilot_ai.modules.identity.repository import IdentityRepository
-from engipilot_ai.modules.identity.tokens import digest_secret
-from engipilot_ai.modules.identity.verification_service import (
+from engipilot_ai.modules.identity.services.verification import (
     EmailVerificationService,
     InvalidVerificationToken,
 )
+from engipilot_ai.modules.identity.tokens import digest_secret
 
 
 async def verify_registration_and_login() -> None:
@@ -162,7 +162,7 @@ async def verify_registration_and_login() -> None:
 
                 # 6. Correct credentials create a device session.
                 with patch(
-                    "engipilot_ai.modules.identity.login_service.issue_access_token",
+                    "engipilot_ai.modules.identity.services.login.issue_access_token",
                     return_value="test-access-jwt",
                 ):
                     async with factory() as session:

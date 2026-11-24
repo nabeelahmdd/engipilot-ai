@@ -9,12 +9,12 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from engipilot_ai.core.config import get_settings
-from engipilot_ai.modules.identity.auth_service import (
+from engipilot_ai.modules.identity.models.user import User
+from engipilot_ai.modules.identity.repository import IdentityRepository
+from engipilot_ai.modules.identity.services import (
     AuthenticationRejected,
     AuthenticationService,
 )
-from engipilot_ai.modules.identity.models.user import User
-from engipilot_ai.modules.identity.repository import IdentityRepository
 from engipilot_ai.modules.identity.tokens import AccessClaims
 
 

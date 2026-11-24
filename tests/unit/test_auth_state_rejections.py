@@ -8,12 +8,12 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from engipilot_ai.modules.identity.auth_service import (
+from engipilot_ai.modules.identity.repository import IdentityRepository
+from engipilot_ai.modules.identity.services.authentication import (
     AuthenticationRejected,
     AuthenticationService,
     AuthRejectionReason,
 )
-from engipilot_ai.modules.identity.repository import IdentityRepository
 from engipilot_ai.modules.identity.tokens import AccessClaims
 
 

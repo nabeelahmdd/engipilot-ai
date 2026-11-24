@@ -13,6 +13,9 @@ from engipilot_ai.api.health import router as health_router
 from engipilot_ai.core.config import get_settings
 from engipilot_ai.core.database import get_engine, get_session_factory
 from engipilot_ai.core.db_base import Base
+from engipilot_ai.modules.identity.api.v1.routes import (
+    router as identity_router,
+)
 
 
 @asynccontextmanager
@@ -55,6 +58,7 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(health_router, prefix="/api/v1")
+    app.include_router(identity_router, prefix="/api/v1")
     return app
 
 

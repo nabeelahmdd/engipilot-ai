@@ -16,16 +16,16 @@ from sqlalchemy.pool import NullPool
 from engipilot_ai.core.config import get_settings
 from engipilot_ai.modules.identity.models.one_time_token import OneTimeToken
 from engipilot_ai.modules.identity.models.user import User
-from engipilot_ai.modules.identity.registration_service import (
+from engipilot_ai.modules.identity.repository import IdentityRepository
+from engipilot_ai.modules.identity.services.registration import (
     RegistrationResult,
     RegistrationService,
 )
-from engipilot_ai.modules.identity.repository import IdentityRepository
-from engipilot_ai.modules.identity.tokens import digest_secret, utcnow
-from engipilot_ai.modules.identity.verification_service import (
+from engipilot_ai.modules.identity.services.verification import (
     EmailVerificationService,
     InvalidVerificationToken,
 )
+from engipilot_ai.modules.identity.tokens import digest_secret, utcnow
 
 
 async def register_user(
