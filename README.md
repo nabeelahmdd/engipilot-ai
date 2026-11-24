@@ -1,132 +1,65 @@
-# EngiPilot AI
+# CommercePilot AI
 
-A **web-first, multi-tenant AI engineering platform** built one complete feature module at a time.
+**Backend-first E-commerce & Agentic AI Engineering Capstone**
 
-> Status: **Day 1 foundation only**. Organization signup, projects, access control, GitHub App connection, and AI PR reviews are **not implemented yet**.
+CommercePilot AI is a modular Python/FastAPI e-commerce application that will progressively add LangChain, LangGraph, MCP, RAG, multi-agent orchestration, evaluation, observability and production safety.
 
-## Technologies
+> **Status:** Existing FastAPI, PostgreSQL, authentication, React and CI foundations are present. The catalog, cart, orders and AI features are **planned, not implemented**.
 
-- Backend: Python 3.12, FastAPI, Pydantic Settings, SQLAlchemy 2, asyncpg, PostgreSQL 17.
-- Frontend: React 19, TypeScript, Vite, ESLint.
-- Developer tools: uv, pytest, Ruff, mypy, npm, Docker, GitHub Actions.
-- Build: Python package using PEP 621 `pyproject.toml`, hatchling, `src/` layout.
+## Our decision
 
-## 1. macOS requirements
+Reuse the existing architecture rather than rebuilding it. The previous engineering-project-specific organization/project modules are retired in this migration; identity/authentication, SQLAlchemy, Alembic history, API, tests, React, Docker, CI and UV dependency management remain.
 
-Install Git, **uv (0.13.7 recommended, to match CI/Docker)**, Node.js 22.12+ (prefer Node 22 LTS), and Docker Desktop (including Compose). On Apple Silicon use the native ARM64 versions where available. VS Code is optional.
+**Naming:** The product and user-facing branding is **CommercePilot AI**. For compatibility, the existing GitHub repo is still `nabeelahmdd/engipilot-ai` and the Python import package is still `engipilot_ai`. Technical identifiers (Python imports, JWT audience/issuer defaults, Docker names, database names and package lockfile) are intentionally retained until a coordinated rename is justified. Do not confuse them with product branding.
 
-Verify prerequisites:
+## Goals
+
+1. Build a real backend: customer identity, catalog, persistent cart, inventory and **simulated** orders.
+2. Provide clean, authorized domain services consumed by REST endpoints and future AI tools.
+3. Implement a complete production-oriented agentic workflow with LangChain, LangGraph, MCP, RAG, memory, multi-agent and HITL.
+4. Evaluate tool choice, retrieval, reasoning trajectories, latency, cost and resilience.
+5. Build everything incrementally, **manually**, with `uv` and evidence-based tests.
+
+No live payment processing, real refunds or fulfillment actions are in scope.
+
+## Existing technology
+
+Python 3.12, uv + locked dependencies, FastAPI, async SQLAlchemy, PostgreSQL 17, Alembic, Pydantic Settings, JWT/password/session auth utilities, React + Vite, Docker/Compose, pytest, Ruff, mypy, GitHub Actions.
+
+## Roadmap
+
+| Phase | Capability |
+|---|---|
+| M0 | Migrate branding and retire unrelated engineering domains with a guarded DB migration |
+| B1 | Verify baseline, auth, tests, PostgreSQL migration and CI |
+| B2 | Products, categories, pricing, inventory and search APIs |
+| B3 | Customer-owned carts and transactions |
+| B4 | Simulated order creation and status |
+| B5 | Authorization, audits and concurrency tests |
+| A1 | LangChain LLM + typed tool adapters |
+| A2 | LangGraph workflow, checkpoints, HITL |
+| A3 | MCP client/server |
+| A4 | RAG/advanced retrieval and cited policies |
+| A5 | Multi-agent supervisor, specialist handoffs |
+| A6 | Memory, evals, observability, model routing, production controls |
+| F | End-to-end capstone and reproducible demonstration |
+
+Read [roadmap](docs/commercepilot/MASTER_PLAN.md), [architecture](docs/commercepilot/ARCHITECTURE.md), [status](docs/commercepilot/STATUS.md), and [handoff](docs/commercepilot/HANDOFF.md).
+
+## Existing local setup
 
 ```bash
-git --version
-uv --version
-node --version
-npm --version
-docker compose version
-```
-
-## 2. Setup from ZIP
-
-```bash
-unzip engipilot-ai-v0-foundation.zip
-cd engipilot-ai-v0-foundation
-bash scripts/bootstrap.sh
+git clone https://github.com/nabeelahmdd/engipilot-ai.git
+cd engipilot-ai
+uv sync --locked
 docker compose up -d postgres
-```
-
-Bootstrap copies `.env.example` to ignored `.env`, creates `uv.lock` and `apps/web/package-lock.json` **using your real package registries**, installs dependencies and runs checks. Both lockfiles **must be committed before opening a PR**. The ZIP does not contain fabricated locks because the packaging environment could not access package registries.
-
-## 3. Run locally (two terminals)
-
-```bash
-# Terminal 1 - backend, in repository root
-make api
-# Terminal 2 - frontend, in repository root
-make web
-```
-
-- Web: http://127.0.0.1:5173
-- API health: http://127.0.0.1:8000/api/v1/health
-- DB readiness: http://127.0.0.1:8000/api/v1/ready
-- Swagger UI: http://127.0.0.1:8000/docs (local/test only)
-
-## 4. Run checks
-
-```bash
-make check
+uv run --locked alembic upgrade head
 uv run --locked pytest -q
-uv run --locked mypy src
-cd apps/web && npm run build
+uv run --locked ruff check .
 ```
 
-**What is checked?** Python formatting/lint/typechecks, backend tests, frontend lint/typecheck/build. GitHub Actions additionally starts PostgreSQL, performs a database smoke test and builds Docker images.
+**Migration warning:** The new Alembic revision intentionally refuses to drop populated legacy organization/project tables. If it blocks, **do not clear database volumes**; inspect and back up data before deciding on the safe conversion. Existing PostgreSQL names are unchanged for compatibility.
 
-## 5. Optional full Docker demo
+API: `http://127.0.0.1:8000`; Web: `http://127.0.0.1:5173` using `make api` and `make web` after setup.
 
-```bash
-docker compose -f compose.yaml -f compose.demo.yaml up --build -d
-# http://127.0.0.1:8080
-docker compose -f compose.yaml -f compose.demo.yaml down
-```
-
-Docker demo is for local smoke tests. It is not an approved production deployment or a substitute for TLS, secure identity, managed secrets and infrastructure hardening.
-
-## 6. Git and GitHub Actions
-
-**Git setup:**
-
-```bash
-git init -b main
-git status --short
-git add .
-git commit -m "chore(repo): bootstrap Python and React foundations"
-```
-
-Only run this **after** `bash scripts/bootstrap.sh` succeeds and both lockfiles exist. `.env`, `.venv`, and `node_modules` are ignored. Create an empty private repository on GitHub, then add its remote and push:
-
-```bash
-git remote add origin git@github.com:YOUR_USER/engipilot-ai.git
-git push -u origin main
-```
-
-After initial bootstrap, do **not** create all feature branches at once. Start each ticket from up-to-date `main`, develop/test, open a PR, merge and delete the branch. Example:
-
-```bash
-git switch main && git pull --ff-only origin main
-git switch -c feat/ENG-005-org-project-models
-# implement real changes and tests
-make check
-git add src/ tests/ docs/ pyproject.toml uv.lock
-git diff --cached --check
-git commit -m "feat(organizations): add organization and project schemas"
-git push -u origin feat/ENG-005-org-project-models
-```
-
-`ENG-005` is a **future task**; do not run the example commit until the code exists. Pull requests trigger CI automatically.
-
-**Documentation:**
-- [GitHub Actions, CI/CD walkthrough](docs/GITHUB_ACTIONS_GUIDE.md)
-- [File-by-file explanation](docs/FILE_BY_FILE_GUIDE.md)
-- [Git workflow](docs/GIT_WORKFLOW.md)
-- [V0 architecture](docs/architecture/V0.md)
-
-## 7. Release tags and containers
-
-After approved tests pass and `main` is updated:
-
-```bash
-git tag -a v0.0.1 -m "V0 foundation"
-git push origin v0.0.1
-```
-
-`.github/workflows/release.yml` reruns quality checks and publishes versioned API/web images to GHCR. **No production deployment occurs.** The repository needs Actions and package publishing enabled; see [CI/CD guide](docs/GITHUB_ACTIONS_GUIDE.md).
-
-## 8. Long-term incremental roadmap
-
-- V0: multi-tenant organization/project foundations, approved Git integrations, **web-based AI PR review**.
-- V1: codebase-aware RAG and AI chat.
-- V2: AI test generation and sandbox validation.
-- V3: durable agent workflows/MCP tools.
-- V4+: governance, SDKs, more engineering agents and observability.
-
-Private source code must never be sent to unapproved AI providers. The initial skeleton does not make any external AI calls.
+**Learning workflow:** one module → one explained change → tests → PR → update `docs/commercepilot/STATUS.md`. No ZIP scaffolds, no premature mass package installation.

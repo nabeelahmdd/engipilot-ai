@@ -1,8 +1,4 @@
-"""Global EngiPilot user record."""
-
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+"""Global CommercePilot customer/account record."""
 
 from sqlalchemy import (
     Boolean,
@@ -15,17 +11,9 @@ from sqlalchemy import (
     text,
     true,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from engipilot_ai.core.db_base import AbstractModel
-
-if TYPE_CHECKING:
-    from engipilot_ai.modules.organizations.models.membership import (
-        OrganizationMembership,
-    )
-    from engipilot_ai.modules.organizations.models.organization import (
-        Organization,
-    )
 
 
 class User(AbstractModel):
@@ -78,15 +66,4 @@ class User(AbstractModel):
             func.lower(email),
             unique=True,
         ),
-    )
-
-    owned_organizations: Mapped[list[Organization]] = relationship(
-        "Organization",
-        back_populates="owner",
-        foreign_keys="Organization.owner_user_id",
-    )
-
-    organization_memberships: Mapped[list[OrganizationMembership]] = relationship(
-        "OrganizationMembership",
-        back_populates="user",
     )

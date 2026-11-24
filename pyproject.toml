@@ -2,7 +2,7 @@
 [project]
 name = "engipilot-ai"
 version = "0.0.1"
-description = "Web-first, multi-tenant enterprise AI engineering platform"
+description = "CommercePilot AI: backend-first e-commerce and agentic AI engineering platform"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [

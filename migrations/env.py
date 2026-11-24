@@ -1,4 +1,4 @@
-"""Alembic migration environment for EngiPilot AI."""
+"""CommercePilot database migration environment (legacy import namespace)."""
 
 import asyncio
 from logging.config import fileConfig

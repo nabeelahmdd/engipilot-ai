@@ -23,16 +23,16 @@ export default function App() {
   return (
     <div className="layout">
       <aside className="sidebar">
-        <div className="brand">✦ <strong>EngiPilot AI</strong></div>
+        <div className="brand">✦ <strong>CommercePilot AI</strong></div>
         <div className="navitem active">Overview</div>
-        <div className="navitem muted">Organizations · next task</div>
-        <div className="navitem muted">Projects · next task</div>
-        <div className="navitem muted">Code review · V0 module</div>
+        <div className="navitem muted">Catalog · planned</div>
+        <div className="navitem muted">Cart & orders · planned</div>
+        <div className="navitem muted">AI assistants · planned</div>
       </aside>
       <main className="content">
-        <div className="eyebrow">ENGINEERING AI PLATFORM</div>
-        <h1>Build useful AI engineering workflows.</h1>
-        <p>Day 1 foundation. Authentication, organizations, project access and AI reviews are not yet implemented.</p>
+        <div className="eyebrow">E-COMMERCE + AGENTIC AI</div>
+        <h1>Build a reliable AI shopping platform.</h1>
+        <p>Backend-first development: shared API, identity and database foundations are in place. Catalog, checkout and AI assistants are not implemented yet.</p>
         <section className="status-card">
           <div className="status-heading">Backend connectivity</div>
           <div className={`status ${status}`}>{status === "online" ? "Connected to FastAPI" : status === "offline" ? "API unavailable" : "Checking API..."}</div>

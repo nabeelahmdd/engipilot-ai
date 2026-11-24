@@ -1,4 +1,4 @@
-"""FastAPI application factory and lifecycle management."""
+"""CommercePilot FastAPI application factory and lifecycle management."""
 
 import logging
 import uuid
@@ -27,15 +27,13 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
-    # Validate all ORM relationships before handling requests.
+    # Validate ORM relationships before handling any requests.
     Base.registry.configure()
-
     settings = get_settings()
-
     logging.basicConfig(level=getattr(logging, settings.log_level))
 
     app = FastAPI(
-        title="EngiPilot AI API",
+        title="CommercePilot AI API",
         version="0.0.1",
         lifespan=lifespan,
         docs_url=("/docs" if settings.app_env in ("local", "test") else None),
@@ -50,22 +48,13 @@ def create_app() -> FastAPI:
             Awaitable[Response],
         ],
     ) -> Response:
-        # Generate an internal correlation ID.
         correlation_id = str(uuid.uuid4())
-
         request.state.request_id = correlation_id
-
         response = await call_next(request)
-
         response.headers["X-Request-ID"] = correlation_id
-
         return response
 
-    app.include_router(
-        health_router,
-        prefix="/api/v1",
-    )
-
+    app.include_router(health_router, prefix="/api/v1")
     return app
 
 
