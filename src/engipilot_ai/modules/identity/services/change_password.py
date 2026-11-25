@@ -10,9 +10,9 @@ from engipilot_ai.modules.identity.passwords import (
 )
 from engipilot_ai.modules.identity.repository import IdentityRepository
 from engipilot_ai.modules.identity.services.authentication import (
-    AuthRejectionReason,
     AuthenticationRejected,
     AuthenticationService,
+    AuthRejectionReason,
 )
 from engipilot_ai.modules.identity.tokens import AccessClaims, utcnow
 

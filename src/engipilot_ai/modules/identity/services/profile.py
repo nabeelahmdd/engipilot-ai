@@ -5,9 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from engipilot_ai.modules.identity.models.user import User
 from engipilot_ai.modules.identity.repository import IdentityRepository
 from engipilot_ai.modules.identity.services.authentication import (
-    AuthRejectionReason,
     AuthenticationRejected,
     AuthenticationService,
+    AuthRejectionReason,
 )
 from engipilot_ai.modules.identity.services.registration import normalize_name
 from engipilot_ai.modules.identity.tokens import AccessClaims
