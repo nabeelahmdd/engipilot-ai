@@ -14,6 +14,10 @@ from engipilot_ai.modules.identity.api.v1.schemas.resend_verification import (
     ResendVerificationRequest,
     ResendVerificationResponse,
 )
+from engipilot_ai.modules.identity.api.v1.schemas.verification import (
+    VerifyEmailRequest,
+    VerifyEmailResponse,
+)
 from engipilot_ai.modules.identity.services import (
     EmailAlreadyRegistered,
     InvalidRegistrationData,
@@ -21,6 +25,7 @@ from engipilot_ai.modules.identity.services import (
 )
 from engipilot_ai.modules.identity.services.verification import (
     EmailVerificationService,
+    InvalidVerificationToken,
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -81,3 +86,31 @@ async def resend_verification(
     )
 
     return ResendVerificationResponse()
+
+
+@router.post(
+    "/verify-email",
+    response_model=VerifyEmailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Verify customer email address",
+)
+async def verify_email(
+    payload: VerifyEmailRequest,
+    session: DbSession,
+) -> VerifyEmailResponse:
+    try:
+        user_uuid = await EmailVerificationService.verify_email(
+            session,
+            token=payload.token.get_secret_value(),
+        )
+
+    except InvalidVerificationToken as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token",
+        ) from exc
+
+    return VerifyEmailResponse(
+        user_uuid=user_uuid,
+        email_verified=True,
+    )

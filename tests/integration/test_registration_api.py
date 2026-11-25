@@ -154,6 +154,65 @@ async def verify_registration_api() -> None:
                     # Registration must never reveal the token.
                     assert raw_token not in response.text
 
+                # 6. Verify the email through the real HTTP endpoint.
+                async with AsyncClient(
+                    transport=ASGITransport(app=app),
+                    base_url="http://test",
+                ) as client:
+                    verified = await client.post(
+                        "/api/v1/auth/verify-email",
+                        json={"token": raw_token},
+                    )
+
+                    assert verified.status_code == 200
+                    assert verified.json() == {
+                        "user_uuid": data["user_uuid"],
+                        "email_verified": True,
+                    }
+
+                    # A consumed token cannot be reused.
+                    replay = await client.post(
+                        "/api/v1/auth/verify-email",
+                        json={"token": raw_token},
+                    )
+
+                    assert replay.status_code == 400
+
+                    # Unknown token must receive the same error.
+                    unknown = await client.post(
+                        "/api/v1/auth/verify-email",
+                        json={"token": "x" * 32},
+                    )
+
+                    assert unknown.status_code == 400
+                    assert unknown.json() == replay.json()
+
+                    # Malformed token must fail schema validation.
+                    malformed = await client.post(
+                        "/api/v1/auth/verify-email",
+                        json={"token": "short"},
+                    )
+
+                    assert malformed.status_code == 422
+
+                # 7. Confirm persisted user and token state.
+                async with factory() as session:
+                    updated_user = await session.get(
+                        User,
+                        user.id,
+                    )
+
+                    updated_token = await session.get(
+                        OneTimeToken,
+                        token.id,
+                    )
+
+                    assert updated_user is not None
+                    assert updated_user.is_email_verified is True
+
+                    assert updated_token is not None
+                    assert updated_token.consumed_at is not None
+
                 fake_sender = FakeEmailSender()
 
                 processed = await dispatch_one(
