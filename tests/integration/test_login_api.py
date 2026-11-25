@@ -194,6 +194,118 @@ async def verify_login_api() -> None:
                             browser_cookie
                         )
 
+                    # Browser refresh requires a cookie and CSRF proof.
+                    refresh_url = "/api/v1/auth/refresh"
+                    csrf = browser_data["csrf_token"]
+
+                    without_csrf = await client.post(refresh_url)
+                    assert without_csrf.status_code == 403
+
+                    wrong_csrf = await client.post(
+                        refresh_url,
+                        headers={"X-CSRF-Token": "wrong-csrf-token-value-123456789"},
+                    )
+                    assert wrong_csrf.status_code == 403
+
+                    async with AsyncClient(
+                        transport=ASGITransport(app=app),
+                        base_url="http://test",
+                    ) as other_client:
+                        missing_cookie = await other_client.post(
+                            refresh_url,
+                            headers={"X-CSRF-Token": csrf},
+                        )
+                        assert missing_cookie.status_code == 401
+
+                        invalid_cookie = await other_client.post(
+                            refresh_url,
+                            headers={"X-CSRF-Token": csrf},
+                            cookies={"cp_refresh": "x" * 32},
+                        )
+                        assert invalid_cookie.status_code == 401
+
+                    with patch(
+                        "engipilot_ai.modules.identity.services.refresh.issue_access_token",
+                        return_value="rotated-access-jwt",
+                    ):
+                        refreshed = await client.post(
+                            refresh_url,
+                            headers={"X-CSRF-Token": csrf},
+                        )
+
+                    assert refreshed.status_code == 200, refreshed.text
+                    refresh_data = refreshed.json()
+                    assert refresh_data["user_uuid"] == browser_data["user_uuid"]
+                    assert refresh_data["session_uuid"] == (
+                        browser_data["session_uuid"]
+                    )
+                    assert refresh_data["access_token"] == "rotated-access-jwt"
+                    assert refresh_data["token_type"] == "bearer"
+                    assert refresh_data["expires_in"] > 0
+                    assert "refresh_token" not in refresh_data
+                    assert "csrf_token" not in refresh_data
+                    assert refreshed.headers["cache-control"] == "no-store"
+                    new_cookie = refreshed.cookies.get("cp_refresh")
+                    assert new_cookie
+                    assert new_cookie != browser_cookie
+
+                    async with factory() as session:
+                        credentials = (
+                            await session.scalars(
+                                select(RefreshCredential).where(
+                                    RefreshCredential.session_id
+                                    == browser_device.id
+                                )
+                            )
+                        ).all()
+                        assert len(credentials) == 2
+                        original = next(
+                            item for item in credentials
+                            if item.token_hash == digest_secret(browser_cookie)
+                        )
+                        replacement = next(
+                            item for item in credentials
+                            if item.token_hash == digest_secret(new_cookie)
+                        )
+                        assert original.used_at is not None
+                        assert replacement.used_at is None
+                        current_device = await session.get(
+                            AuthSession, browser_device.id
+                        )
+                        assert current_device is not None
+                        assert current_device.revoked_at is None
+
+                    # Wrong CSRF must never revoke a session, even on replay.
+                    async with AsyncClient(
+                        transport=ASGITransport(app=app),
+                        base_url="http://test",
+                        cookies={"cp_refresh": browser_cookie},
+                    ) as replay_client:
+                        tampered = await replay_client.post(
+                            refresh_url,
+                            headers={"X-CSRF-Token": "wrong-csrf-token-value-123456789"},
+                        )
+                        assert tampered.status_code == 403
+
+                        replay = await replay_client.post(
+                            refresh_url,
+                            headers={"X-CSRF-Token": csrf},
+                        )
+                        assert replay.status_code == 401
+
+                    async with factory() as session:
+                        revoked_device = await session.get(
+                            AuthSession, browser_device.id
+                        )
+                        assert revoked_device is not None
+                        assert revoked_device.revoked_at is not None
+
+                    rejected = await client.post(
+                        refresh_url,
+                        headers={"X-CSRF-Token": csrf},
+                    )
+                    assert rejected.status_code == 401
+
                     async with factory() as session:
                         async with session.begin():
                             current = await session.get(User, user.id)

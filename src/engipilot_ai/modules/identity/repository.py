@@ -46,6 +46,21 @@ class IdentityRepository:
         return await session.scalar(select(User).where(User.uuid == user_uuid))
 
     @staticmethod
+    async def get_user_by_id_for_update(
+        session: AsyncSession,
+        *,
+        user_id: int,
+    ) -> User | None:
+        """Lock user while checking refresh eligibility."""
+        statement = (
+            select(User)
+            .where(User.id == user_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return await session.scalar(statement)
+
+    @staticmethod
     async def create_user(
         session: AsyncSession,
         *,
@@ -110,6 +125,21 @@ class IdentityRepository:
             return None
 
         return record[0], record[1]
+
+    @staticmethod
+    async def get_auth_session_for_update(
+        session: AsyncSession,
+        *,
+        session_id: int,
+    ) -> AuthSession | None:
+        """Lock a specific device session during credential rotation."""
+        statement = (
+            select(AuthSession)
+            .where(AuthSession.id == session_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return await session.scalar(statement)
 
     @staticmethod
     async def create_auth_session(

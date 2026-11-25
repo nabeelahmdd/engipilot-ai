@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from engipilot_ai.core.config import get_settings
@@ -11,6 +11,7 @@ from engipilot_ai.modules.identity.api.v1.schemas.login import (
     LoginRequest,
     LoginResponse,
 )
+from engipilot_ai.modules.identity.api.v1.schemas.refresh import RefreshResponse
 from engipilot_ai.modules.identity.api.v1.schemas.registration import (
     RegisterRequest,
     RegisterResponse,
@@ -28,9 +29,14 @@ from engipilot_ai.modules.identity.services import (
     EmailAlreadyRegistered,
     EmailNotVerified,
     InvalidCredentials,
-    LoginService,
     InvalidRegistrationData,
+    LoginService,
     RegistrationService,
+)
+from engipilot_ai.modules.identity.services.refresh import (
+    InvalidRefreshCSRF,
+    InvalidRefreshToken,
+    RefreshService,
 )
 from engipilot_ai.modules.identity.services.verification import (
     EmailVerificationService,
@@ -179,4 +185,70 @@ async def login(
         access_token=result.access_token,
         expires_in=result.expires_in,
         csrf_token=result.csrf_token,
+    )
+
+
+@router.post(
+    "/refresh",
+    response_model=RefreshResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Rotate browser refresh token",
+    responses={
+        401: {"description": "Refresh token invalid, expired, or reused"},
+        403: {"description": "CSRF token invalid"},
+    },
+)
+async def refresh(
+    request: Request,
+    response: Response,
+    session: DbSession,
+    csrf_token: Annotated[str | None, Header(alias="X-CSRF-Token")] = None,
+) -> RefreshResponse:
+    refresh_secret = request.cookies.get("cp_refresh")
+    if not refresh_secret:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+    if not csrf_token:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid CSRF token",
+        )
+
+    try:
+        rotated = await RefreshService.rotate(
+            session,
+            refresh_secret=refresh_secret,
+            csrf_secret=csrf_token,
+        )
+    except InvalidRefreshCSRF as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid CSRF token",
+        ) from exc
+    except InvalidRefreshToken as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        ) from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+
+    settings = get_settings()
+    response.set_cookie(
+        key="cp_refresh",
+        value=rotated.refresh_token,
+        max_age=rotated.refresh_cookie_max_age,
+        path="/api/v1/auth",
+        httponly=True,
+        secure=settings.app_env in ("staging", "production"),
+        samesite="lax",
+    )
+    return RefreshResponse(
+        user_uuid=rotated.user_uuid,
+        session_uuid=rotated.session_uuid,
+        access_token=rotated.access_token,
+        expires_in=rotated.expires_in,
     )
