@@ -38,9 +38,7 @@ class ProfileService:
                 or not user.is_email_verified
                 or user.auth_version != claims.auth_version
             ):
-                raise AuthenticationRejected(
-                    AuthRejectionReason.TOKEN_VERSION_MISMATCH
-                )
+                raise AuthenticationRejected(AuthRejectionReason.TOKEN_VERSION_MISMATCH)
 
             if "first_name" in changes:
                 user.first_name = normalize_name(changes["first_name"])

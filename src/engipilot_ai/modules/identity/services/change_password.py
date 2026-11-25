@@ -81,9 +81,7 @@ class ChangePasswordService:
                 or locked.auth_version != claims.auth_version
                 or locked.password_hash != previous_hash
             ):
-                raise AuthenticationRejected(
-                    AuthRejectionReason.TOKEN_VERSION_MISMATCH
-                )
+                raise AuthenticationRejected(AuthRejectionReason.TOKEN_VERSION_MISMATCH)
 
             now = utcnow()
             locked.password_hash = replacement_hash
