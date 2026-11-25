@@ -43,10 +43,7 @@ class RefreshService:
         csrf_secret: str,
     ) -> RefreshResult:
         """Consume a refresh credential, issue its replacement atomically."""
-        if (
-            not 16 <= len(refresh_secret) <= 512
-            or not refresh_secret.isascii()
-        ):
+        if not 16 <= len(refresh_secret) <= 512 or not refresh_secret.isascii():
             raise InvalidRefreshToken()
         if not 16 <= len(csrf_secret) <= 512 or not csrf_secret.isascii():
             raise InvalidRefreshCSRF()

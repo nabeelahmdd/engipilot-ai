@@ -174,11 +174,12 @@ async def verify_login_api() -> None:
                         assert len(devices) == 1
 
                         browser_device = next(
-                            device for device in devices
+                            device
+                            for device in devices
                             if device.client_type == "browser"
                         )
-                        assert str(browser_device.uuid) == (
-                            browser_data["session_uuid"]
+                        assert (
+                            str(browser_device.uuid) == (browser_data["session_uuid"])
                         )
                         assert browser_device.csrf_hash == digest_secret(
                             browser_data["csrf_token"]
@@ -236,8 +237,8 @@ async def verify_login_api() -> None:
                     assert refreshed.status_code == 200, refreshed.text
                     refresh_data = refreshed.json()
                     assert refresh_data["user_uuid"] == browser_data["user_uuid"]
-                    assert refresh_data["session_uuid"] == (
-                        browser_data["session_uuid"]
+                    assert (
+                        refresh_data["session_uuid"] == (browser_data["session_uuid"])
                     )
                     assert refresh_data["access_token"] == "rotated-access-jwt"
                     assert refresh_data["token_type"] == "bearer"
@@ -253,18 +254,19 @@ async def verify_login_api() -> None:
                         credentials = (
                             await session.scalars(
                                 select(RefreshCredential).where(
-                                    RefreshCredential.session_id
-                                    == browser_device.id
+                                    RefreshCredential.session_id == browser_device.id
                                 )
                             )
                         ).all()
                         assert len(credentials) == 2
                         original = next(
-                            item for item in credentials
+                            item
+                            for item in credentials
                             if item.token_hash == digest_secret(browser_cookie)
                         )
                         replacement = next(
-                            item for item in credentials
+                            item
+                            for item in credentials
                             if item.token_hash == digest_secret(new_cookie)
                         )
                         assert original.used_at is not None
