@@ -113,10 +113,8 @@ async def verify_forgot_password_api() -> None:
                             )
                         )
                         assert verification_email is not None
-                        verification_token = (
-                            get_email_payload_cipher().decrypt_token(
-                                verification_email.encrypted_payload
-                            )
+                        verification_token = get_email_payload_cipher().decrypt_token(
+                            verification_email.encrypted_payload
                         )
                         early_resets = (
                             await session.scalars(
@@ -198,9 +196,7 @@ async def verify_forgot_password_api() -> None:
 
                     async with factory() as session:
                         previous = await session.get(OneTimeToken, first_token.id)
-                        obsolete_email = await session.get(
-                            EmailOutbox, first_email.id
-                        )
+                        obsolete_email = await session.get(EmailOutbox, first_email.id)
                         assert previous is not None
                         assert previous.expires_at <= utcnow()
                         assert obsolete_email is not None
@@ -287,7 +283,6 @@ async def verify_forgot_password_api() -> None:
                         sent_email = await session.get(EmailOutbox, last_email.id)
                         assert sent_email is not None
                         assert sent_email.status == "sent"
-
 
                     async with factory() as session:
                         async with session.begin():

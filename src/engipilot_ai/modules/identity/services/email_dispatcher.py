@@ -8,6 +8,7 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from engipilot_ai.core.config import get_settings
 from engipilot_ai.core.database import get_session_factory
 from engipilot_ai.modules.identity.email_payload import (
     get_email_payload_cipher,
@@ -89,8 +90,8 @@ async def dispatch_one(
                 "A password reset was requested for your account.\n\n"
                 "Use this token to reset your password:\n\n"
                 f"{token}\n\n"
-                "This token expires in 30 minutes. "
-                "If you did not request a reset, ignore this email."
+                f"This token expires in {get_settings().password_reset_minutes} "
+                "minutes. If you did not request a reset, ignore this email."
             )
         else:
             raise ValueError("Unsupported email template")

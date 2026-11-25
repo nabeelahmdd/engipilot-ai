@@ -8,6 +8,4 @@ class ForgotPasswordRequest(BaseModel):
 
 
 class ForgotPasswordResponse(BaseModel):
-    message: str = (
-        "If an eligible account exists, a password reset email will be sent."
-    )
+    message: str = "If an eligible account exists, a password reset email will be sent."

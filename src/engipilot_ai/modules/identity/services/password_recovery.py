@@ -40,9 +40,7 @@ class PasswordRecoveryService:
                 session,
                 user_id=user.id,
             )
-            if latest is not None and latest.created_at > now - timedelta(
-                seconds=60
-            ):
+            if latest is not None and latest.created_at > now - timedelta(seconds=60):
                 return
 
             recent = await IdentityRepository.count_recent_password_reset_tokens(
