@@ -7,6 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from engipilot_ai.core.config import get_settings
 from engipilot_ai.core.database import get_db_session
+from engipilot_ai.modules.identity.api.v1.dependencies import AuthClaims
+from engipilot_ai.modules.identity.api.v1.schemas.change_password import (
+    ChangePasswordRequest,
+)
 from engipilot_ai.modules.identity.api.v1.schemas.login import (
     LoginRequest,
     LoginResponse,
@@ -16,6 +20,10 @@ from engipilot_ai.modules.identity.api.v1.schemas.password_recovery import (
     ForgotPasswordResponse,
     ResetPasswordRequest,
     ResetPasswordResponse,
+)
+from engipilot_ai.modules.identity.api.v1.schemas.profile import (
+    ProfileResponse,
+    UpdateProfileRequest,
 )
 from engipilot_ai.modules.identity.api.v1.schemas.refresh import RefreshResponse
 from engipilot_ai.modules.identity.api.v1.schemas.registration import (
@@ -39,6 +47,15 @@ from engipilot_ai.modules.identity.services import (
     LoginService,
     RegistrationService,
 )
+from engipilot_ai.modules.identity.services.authentication import (
+    AuthenticationRejected,
+    AuthenticationService,
+)
+from engipilot_ai.modules.identity.services.change_password import (
+    ChangePasswordService,
+    InvalidCurrentPassword,
+    InvalidNewPassword,
+)
 from engipilot_ai.modules.identity.services.logout import (
     InvalidLogoutCSRF,
     LogoutService,
@@ -48,6 +65,7 @@ from engipilot_ai.modules.identity.services.password_recovery import (
     InvalidPasswordResetToken,
     PasswordRecoveryService,
 )
+from engipilot_ai.modules.identity.services.profile import ProfileService
 from engipilot_ai.modules.identity.services.refresh import (
     InvalidRefreshCSRF,
     InvalidRefreshToken,
@@ -369,3 +387,111 @@ async def reset_password(
         samesite="lax",
     )
     return ResetPasswordResponse()
+
+
+@router.get(
+    "/me",
+    response_model=ProfileResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get own profile",
+)
+async def get_profile(
+    session: DbSession,
+    claims: AuthClaims,
+    response: Response,
+) -> ProfileResponse:
+    try:
+        user = await AuthenticationService.require_authenticated_user(
+            session,
+            claims,
+        )
+    except AuthenticationRejected as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    return ProfileResponse.model_validate(user)
+
+
+@router.patch(
+    "/me",
+    response_model=ProfileResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update own profile",
+)
+async def update_profile(
+    payload: UpdateProfileRequest,
+    session: DbSession,
+    claims: AuthClaims,
+    response: Response,
+) -> ProfileResponse:
+    changes = payload.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="At least one profile field is required",
+        )
+    try:
+        user = await ProfileService.update_profile(
+            session,
+            claims=claims,
+            changes=changes,
+        )
+    except AuthenticationRejected as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    return ProfileResponse.model_validate(user)
+
+
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Change password and sign out all sessions",
+)
+async def change_password(
+    payload: ChangePasswordRequest,
+    session: DbSession,
+    claims: AuthClaims,
+    response: Response,
+) -> None:
+    try:
+        await ChangePasswordService.change_password(
+            session,
+            claims=claims,
+            current_password=payload.current_password.get_secret_value(),
+            new_password=payload.new_password.get_secret_value(),
+        )
+    except AuthenticationRejected as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+    except InvalidCurrentPassword as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        ) from exc
+    except InvalidNewPassword as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    response.delete_cookie(
+        key="cp_refresh",
+        path="/api/v1/auth",
+        secure=get_settings().app_env in ("staging", "production"),
+        httponly=True,
+        samesite="lax",
+    )
