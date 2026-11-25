@@ -283,7 +283,9 @@ async def verify_login_api() -> None:
                     ) as replay_client:
                         tampered = await replay_client.post(
                             refresh_url,
-                            headers={"X-CSRF-Token": "wrong-csrf-token-value-123456789"},
+                            headers={
+                                "X-CSRF-Token": "wrong-csrf-token-value-123456789",
+                            },
                         )
                         assert tampered.status_code == 403
 
