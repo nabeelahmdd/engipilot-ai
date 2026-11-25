@@ -200,6 +200,9 @@ async def verify_reset_password_api() -> None:
                         )
                         assert fresh_email is not None
                         assert fresh_email.id != first_email.id
+                        suppressed = await session.get(EmailOutbox, first_email.id)
+                        assert suppressed is not None
+                        assert suppressed.status == "failed"
                         fresh_secret = get_email_payload_cipher().decrypt_token(
                             fresh_email.encrypted_payload
                         )
