@@ -2,10 +2,15 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from engipilot_ai.core.config import get_settings
 from engipilot_ai.core.database import get_db_session
+from engipilot_ai.modules.identity.api.v1.schemas.login import (
+    LoginRequest,
+    LoginResponse,
+)
 from engipilot_ai.modules.identity.api.v1.schemas.registration import (
     RegisterRequest,
     RegisterResponse,
@@ -19,7 +24,11 @@ from engipilot_ai.modules.identity.api.v1.schemas.verification import (
     VerifyEmailResponse,
 )
 from engipilot_ai.modules.identity.services import (
+    AccountDisabled,
     EmailAlreadyRegistered,
+    EmailNotVerified,
+    InvalidCredentials,
+    LoginService,
     InvalidRegistrationData,
     RegistrationService,
 )
@@ -113,4 +122,65 @@ async def verify_email(
     return VerifyEmailResponse(
         user_uuid=user_uuid,
         email_verified=True,
+    )
+
+
+@router.post(
+    "/login",
+    response_model=LoginResponse,
+    response_model_exclude_none=True,
+    status_code=status.HTTP_200_OK,
+    summary="Sign in with email and password",
+    responses={
+        401: {"description": "Invalid email or password"},
+        403: {"description": "Email verification required"},
+    },
+)
+async def login(
+    payload: LoginRequest,
+    response: Response,
+    session: DbSession,
+) -> LoginResponse:
+    try:
+        result = await LoginService.login(
+            session,
+            email=payload.email,
+            password=payload.password.get_secret_value(),
+            client_type=payload.client_type,
+        )
+    except (InvalidCredentials, AccountDisabled) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        ) from exc
+    except EmailNotVerified as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email verification required",
+        ) from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+
+    if payload.client_type == "browser":
+        settings = get_settings()
+        response.set_cookie(
+            key="cp_refresh",
+            value=result.refresh_token,
+            max_age=settings.refresh_session_days * 86400,
+            path="/api/v1/auth",
+            httponly=True,
+            secure=settings.app_env in ("staging", "production"),
+            samesite="lax",
+        )
+
+    return LoginResponse(
+        user_uuid=result.user_uuid,
+        session_uuid=result.session_uuid,
+        access_token=result.access_token,
+        expires_in=result.expires_in,
+        refresh_token=(
+            result.refresh_token if payload.client_type == "native" else None
+        ),
+        csrf_token=(result.csrf_token if payload.client_type == "browser" else None),
     )
