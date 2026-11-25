@@ -125,6 +125,16 @@ async def verify_login_api() -> None:
                     )
                     assert verified.status_code == 200
 
+                    unsupported_client = await client.post(
+                        login_url,
+                        json={
+                            "email": email,
+                            "password": password,
+                            "client_type": "native",
+                        },
+                    )
+                    assert unsupported_client.status_code == 422
+
                     # Keep this HTTP test independent of filesystem JWT keys.
                     with patch(
                         "engipilot_ai.modules.identity.services.login.issue_access_token",
@@ -133,14 +143,6 @@ async def verify_login_api() -> None:
                         browser = await client.post(
                             login_url,
                             json={"email": email.upper(), "password": password},
-                        )
-                        native = await client.post(
-                            login_url,
-                            json={
-                                "email": email,
-                                "password": password,
-                                "client_type": "native",
-                            },
                         )
 
                     assert browser.status_code == 200, browser.text
@@ -161,15 +163,6 @@ async def verify_login_api() -> None:
                     assert "samesite=lax" in set_cookie
                     assert "path=/api/v1/auth" in set_cookie
 
-                    assert native.status_code == 200, native.text
-                    native_data = native.json()
-                    assert native_data["user_uuid"] == str(user.uuid)
-                    assert native_data["access_token"] == "test-access-jwt"
-                    assert native_data["refresh_token"]
-                    assert "csrf_token" not in native_data
-                    assert native.headers.get("set-cookie") is None
-                    assert native.headers["cache-control"] == "no-store"
-
                     async with factory() as session:
                         devices = (
                             await session.scalars(
@@ -178,42 +171,27 @@ async def verify_login_api() -> None:
                                 )
                             )
                         ).all()
-                        assert len(devices) == 2
+                        assert len(devices) == 1
 
                         browser_device = next(
                             device for device in devices
                             if device.client_type == "browser"
                         )
-                        native_device = next(
-                            device for device in devices
-                            if device.client_type == "native"
-                        )
                         assert str(browser_device.uuid) == (
                             browser_data["session_uuid"]
                         )
-                        assert str(native_device.uuid) == native_data["session_uuid"]
                         assert browser_device.csrf_hash == digest_secret(
                             browser_data["csrf_token"]
                         )
-                        assert native_device.csrf_hash is None
 
                         browser_refresh = await session.scalar(
                             select(RefreshCredential).where(
                                 RefreshCredential.session_id == browser_device.id
                             )
                         )
-                        native_refresh = await session.scalar(
-                            select(RefreshCredential).where(
-                                RefreshCredential.session_id == native_device.id
-                            )
-                        )
                         assert browser_refresh is not None
-                        assert native_refresh is not None
                         assert browser_refresh.token_hash == digest_secret(
                             browser_cookie
-                        )
-                        assert native_refresh.token_hash == digest_secret(
-                            native_data["refresh_token"]
                         )
 
                     async with factory() as session:
@@ -237,7 +215,7 @@ async def verify_login_api() -> None:
                                 )
                             )
                         ).all()
-                        assert len(sessions_after) == 2
+                        assert len(sessions_after) == 1
 
             finally:
                 app.dependency_overrides.pop(get_db_session, None)

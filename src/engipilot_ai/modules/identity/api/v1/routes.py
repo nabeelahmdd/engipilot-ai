@@ -146,7 +146,7 @@ async def login(
             session,
             email=payload.email,
             password=payload.password.get_secret_value(),
-            client_type=payload.client_type,
+            client_type="browser",
         )
     except (InvalidCredentials, AccountDisabled) as exc:
         raise HTTPException(
@@ -162,25 +162,21 @@ async def login(
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
 
-    if payload.client_type == "browser":
-        settings = get_settings()
-        response.set_cookie(
-            key="cp_refresh",
-            value=result.refresh_token,
-            max_age=settings.refresh_session_days * 86400,
-            path="/api/v1/auth",
-            httponly=True,
-            secure=settings.app_env in ("staging", "production"),
-            samesite="lax",
-        )
+    settings = get_settings()
+    response.set_cookie(
+        key="cp_refresh",
+        value=result.refresh_token,
+        max_age=settings.refresh_session_days * 86400,
+        path="/api/v1/auth",
+        httponly=True,
+        secure=settings.app_env in ("staging", "production"),
+        samesite="lax",
+    )
 
     return LoginResponse(
         user_uuid=result.user_uuid,
         session_uuid=result.session_uuid,
         access_token=result.access_token,
         expires_in=result.expires_in,
-        refresh_token=(
-            result.refresh_token if payload.client_type == "native" else None
-        ),
-        csrf_token=(result.csrf_token if payload.client_type == "browser" else None),
+        csrf_token=result.csrf_token,
     )
