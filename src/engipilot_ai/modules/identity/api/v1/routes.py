@@ -33,6 +33,10 @@ from engipilot_ai.modules.identity.services import (
     LoginService,
     RegistrationService,
 )
+from engipilot_ai.modules.identity.services.logout import (
+    InvalidLogoutCSRF,
+    LogoutService,
+)
 from engipilot_ai.modules.identity.services.refresh import (
     InvalidRefreshCSRF,
     InvalidRefreshToken,
@@ -251,4 +255,48 @@ async def refresh(
         session_uuid=rotated.session_uuid,
         access_token=rotated.access_token,
         expires_in=rotated.expires_in,
+    )
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Log out current browser session",
+    responses={403: {"description": "Invalid CSRF token"}},
+)
+async def logout(
+    request: Request,
+    response: Response,
+    session: DbSession,
+    csrf_token: Annotated[str | None, Header(alias="X-CSRF-Token")] = None,
+) -> None:
+    refresh_secret = request.cookies.get("cp_refresh")
+
+    if refresh_secret:
+        if not csrf_token:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid CSRF token",
+            )
+
+        try:
+            await LogoutService.logout(
+                session,
+                refresh_secret=refresh_secret,
+                csrf_secret=csrf_token,
+            )
+        except InvalidLogoutCSRF as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid CSRF token",
+            ) from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    response.delete_cookie(
+        key="cp_refresh",
+        path="/api/v1/auth",
+        secure=get_settings().app_env in ("staging", "production"),
+        httponly=True,
+        samesite="lax",
     )
