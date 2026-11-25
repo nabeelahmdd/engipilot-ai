@@ -73,20 +73,32 @@ async def dispatch_one(
     success = False
 
     try:
-        if job.template != "verify_email":
-            raise ValueError("Unsupported email template")
-
         token = get_email_payload_cipher().decrypt_token(job.payload)
 
-        await (sender or LocalSMTPEmailSender()).send(
-            recipient=job.recipient,
-            subject="Verify your CommercePilot AI email",
-            body=(
+        if job.template == "verify_email":
+            subject = "Verify your CommercePilot AI email"
+            body = (
                 "Welcome to CommercePilot AI!\n\n"
                 "Use this token to verify your email address:\n\n"
                 f"{token}\n\n"
                 "If you did not create an account, ignore this email."
-            ),
+            )
+        elif job.template == "reset_password":
+            subject = "Reset your CommercePilot AI password"
+            body = (
+                "A password reset was requested for your account.\n\n"
+                "Use this token to reset your password:\n\n"
+                f"{token}\n\n"
+                "This token expires in 30 minutes. "
+                "If you did not request a reset, ignore this email."
+            )
+        else:
+            raise ValueError("Unsupported email template")
+
+        await (sender or LocalSMTPEmailSender()).send(
+            recipient=job.recipient,
+            subject=subject,
+            body=body,
         )
 
         success = True

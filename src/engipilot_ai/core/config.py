@@ -47,6 +47,7 @@ class Settings(BaseSettings):
         le=72,
     )
     email_outbox_key: SecretStr | None = None
+    password_reset_minutes: int = Field(default=30, ge=5, le=60)
 
     smtp_host: str = "127.0.0.1"
     smtp_port: int = Field(default=1025, ge=1, le=65535)

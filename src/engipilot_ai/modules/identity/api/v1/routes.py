@@ -11,6 +11,10 @@ from engipilot_ai.modules.identity.api.v1.schemas.login import (
     LoginRequest,
     LoginResponse,
 )
+from engipilot_ai.modules.identity.api.v1.schemas.password_recovery import (
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+)
 from engipilot_ai.modules.identity.api.v1.schemas.refresh import RefreshResponse
 from engipilot_ai.modules.identity.api.v1.schemas.registration import (
     RegisterRequest,
@@ -36,6 +40,9 @@ from engipilot_ai.modules.identity.services import (
 from engipilot_ai.modules.identity.services.logout import (
     InvalidLogoutCSRF,
     LogoutService,
+)
+from engipilot_ai.modules.identity.services.password_recovery import (
+    PasswordRecoveryService,
 )
 from engipilot_ai.modules.identity.services.refresh import (
     InvalidRefreshCSRF,
@@ -300,3 +307,20 @@ async def logout(
         httponly=True,
         samesite="lax",
     )
+
+
+@router.post(
+    "/forgot-password",
+    response_model=ForgotPasswordResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Request a password reset email",
+)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    session: DbSession,
+) -> ForgotPasswordResponse:
+    await PasswordRecoveryService.request_reset(
+        session,
+        email=str(payload.email),
+    )
+    return ForgotPasswordResponse()

@@ -422,3 +422,74 @@ class IdentityRepository:
             )
             .values(status="failed")
         )
+
+    @staticmethod
+    async def get_latest_password_reset_token(
+        session: AsyncSession,
+        *,
+        user_id: int,
+    ) -> OneTimeToken | None:
+        statement = (
+            select(OneTimeToken)
+            .where(
+                OneTimeToken.user_id == user_id,
+                OneTimeToken.purpose == "reset_password",
+            )
+            .order_by(OneTimeToken.created_at.desc(), OneTimeToken.id.desc())
+            .limit(1)
+        )
+        return await session.scalar(statement)
+
+    @staticmethod
+    async def count_recent_password_reset_tokens(
+        session: AsyncSession,
+        *,
+        user_id: int,
+        since: datetime,
+    ) -> int:
+        statement = (
+            select(func.count())
+            .select_from(OneTimeToken)
+            .where(
+                OneTimeToken.user_id == user_id,
+                OneTimeToken.purpose == "reset_password",
+                OneTimeToken.created_at >= since,
+            )
+        )
+        return int(await session.scalar(statement) or 0)
+
+    @staticmethod
+    async def expire_active_password_reset_tokens(
+        session: AsyncSession,
+        *,
+        user_id: int,
+        now: datetime,
+    ) -> None:
+        statement = (
+            update(OneTimeToken)
+            .where(
+                OneTimeToken.user_id == user_id,
+                OneTimeToken.purpose == "reset_password",
+                OneTimeToken.consumed_at.is_(None),
+                OneTimeToken.expires_at > now,
+            )
+            .values(expires_at=now)
+        )
+        await session.execute(statement)
+
+    @staticmethod
+    async def cancel_pending_password_reset_emails(
+        session: AsyncSession,
+        *,
+        user_id: int,
+    ) -> None:
+        # The existing schema has no "cancelled" status.
+        await session.execute(
+            update(EmailOutbox)
+            .where(
+                EmailOutbox.user_id == user_id,
+                EmailOutbox.template == "reset_password",
+                EmailOutbox.status == "pending",
+            )
+            .values(status="failed")
+        )
