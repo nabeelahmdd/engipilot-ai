@@ -78,9 +78,7 @@ async def verify_logout_api() -> None:
                         )
                         assert user is not None
                         queued = await session.scalar(
-                            select(EmailOutbox).where(
-                                EmailOutbox.user_id == user.id
-                            )
+                            select(EmailOutbox).where(EmailOutbox.user_id == user.id)
                         )
                         assert queued is not None
                         token = get_email_payload_cipher().decrypt_token(
