@@ -355,3 +355,40 @@ class IdentityRepository:
 
         result = await session.scalar(statement.returning(EmailOutbox.id))
         return result is not None
+
+    @staticmethod
+    async def count_recent_verification_tokens(
+        session: AsyncSession,
+        *,
+        user_id: int,
+        since: datetime,
+    ) -> int:
+        """Count verification tokens created during a time window."""
+        statement = (
+            select(func.count())
+            .select_from(OneTimeToken)
+            .where(
+                OneTimeToken.user_id == user_id,
+                OneTimeToken.purpose == "verify_email",
+                OneTimeToken.created_at >= since,
+            )
+        )
+
+        return int(await session.scalar(statement) or 0)
+
+    @staticmethod
+    async def cancel_pending_verification_emails(
+        session: AsyncSession,
+        *,
+        user_id: int,
+    ) -> None:
+        """Prevent pending emails from sending obsolete tokens."""
+        await session.execute(
+            update(EmailOutbox)
+            .where(
+                EmailOutbox.user_id == user_id,
+                EmailOutbox.template == "verify_email",
+                EmailOutbox.status == "pending",
+            )
+            .values(status="failed")
+        )

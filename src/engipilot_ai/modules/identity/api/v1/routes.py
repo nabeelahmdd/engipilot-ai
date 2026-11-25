@@ -10,10 +10,17 @@ from engipilot_ai.modules.identity.api.v1.schemas.registration import (
     RegisterRequest,
     RegisterResponse,
 )
+from engipilot_ai.modules.identity.api.v1.schemas.resend_verification import (
+    ResendVerificationRequest,
+    ResendVerificationResponse,
+)
 from engipilot_ai.modules.identity.services import (
     EmailAlreadyRegistered,
     InvalidRegistrationData,
     RegistrationService,
+)
+from engipilot_ai.modules.identity.services.verification import (
+    EmailVerificationService,
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -56,3 +63,21 @@ async def register(
         user_uuid=result.user_uuid,
         email_verification_required=True,
     )
+
+
+@router.post(
+    "/resend-verification",
+    response_model=ResendVerificationResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Resend account verification email",
+)
+async def resend_verification(
+    payload: ResendVerificationRequest,
+    session: DbSession,
+) -> ResendVerificationResponse:
+    await EmailVerificationService.resend_verification(
+        session,
+        email=str(payload.email),
+    )
+
+    return ResendVerificationResponse()
