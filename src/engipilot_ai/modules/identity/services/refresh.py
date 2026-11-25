@@ -61,6 +61,18 @@ class RefreshService:
                 refresh_hash,
             )
             if credential is not None:
+                user_id = await IdentityRepository.get_auth_session_user_id(
+                    session,
+                    session_id=credential.session_id,
+                )
+                user = (
+                    await IdentityRepository.get_user_by_id_for_update(
+                        session,
+                        user_id=user_id,
+                    )
+                    if user_id is not None
+                    else None
+                )
                 device = await IdentityRepository.get_auth_session_for_update(
                     session,
                     session_id=credential.session_id,
@@ -82,14 +94,11 @@ class RefreshService:
                             and device.expires_at > now
                             and credential.expires_at > now
                         ):
-                            user = await IdentityRepository.get_user_by_id_for_update(
-                                session,
-                                user_id=device.user_id,
-                            )
                             if (
                                 user is not None
                                 and user.is_active
                                 and user.is_email_verified
+                                and device.user_id == user.id
                             ):
                                 credential.used_at = now
                                 await IdentityRepository.create_refresh_credential(

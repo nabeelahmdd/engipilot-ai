@@ -493,3 +493,81 @@ class IdentityRepository:
             )
             .values(status="failed")
         )
+
+    @staticmethod
+    async def get_password_reset_token(
+        session: AsyncSession,
+        *,
+        token_hash: str,
+    ) -> OneTimeToken | None:
+        """Avoid Argon2 CPU work for unknown or stale recovery tokens."""
+        return await session.scalar(
+            select(OneTimeToken).where(
+                OneTimeToken.token_hash == token_hash,
+                OneTimeToken.purpose == "reset_password",
+            )
+        )
+
+    @staticmethod
+    async def get_password_reset_user_for_update(
+        session: AsyncSession,
+        *,
+        token_hash: str,
+    ) -> User | None:
+        statement = (
+            select(User)
+            .join(OneTimeToken, OneTimeToken.user_id == User.id)
+            .where(
+                OneTimeToken.token_hash == token_hash,
+                OneTimeToken.purpose == "reset_password",
+            )
+            .with_for_update(of=User)
+            .execution_options(populate_existing=True)
+        )
+        return await session.scalar(statement)
+
+    @staticmethod
+    async def get_password_reset_token_for_update(
+        session: AsyncSession,
+        *,
+        user_id: int,
+        token_hash: str,
+    ) -> OneTimeToken | None:
+        statement = (
+            select(OneTimeToken)
+            .where(
+                OneTimeToken.user_id == user_id,
+                OneTimeToken.token_hash == token_hash,
+                OneTimeToken.purpose == "reset_password",
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return await session.scalar(statement)
+
+    @staticmethod
+    async def revoke_all_user_sessions(
+        session: AsyncSession,
+        *,
+        user_id: int,
+        now: datetime,
+    ) -> None:
+        await session.execute(
+            update(AuthSession)
+            .where(
+                AuthSession.user_id == user_id,
+                AuthSession.revoked_at.is_(None),
+            )
+            .values(revoked_at=now)
+        )
+
+    @staticmethod
+    async def get_auth_session_user_id(
+        session: AsyncSession,
+        *,
+        session_id: int,
+    ) -> int | None:
+        """Read owner before locking a session to prevent lock inversion."""
+        return await session.scalar(
+            select(AuthSession.user_id).where(AuthSession.id == session_id)
+        )

@@ -14,6 +14,8 @@ from engipilot_ai.modules.identity.api.v1.schemas.login import (
 from engipilot_ai.modules.identity.api.v1.schemas.password_recovery import (
     ForgotPasswordRequest,
     ForgotPasswordResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
 )
 from engipilot_ai.modules.identity.api.v1.schemas.refresh import RefreshResponse
 from engipilot_ai.modules.identity.api.v1.schemas.registration import (
@@ -42,6 +44,8 @@ from engipilot_ai.modules.identity.services.logout import (
     LogoutService,
 )
 from engipilot_ai.modules.identity.services.password_recovery import (
+    InvalidPasswordResetData,
+    InvalidPasswordResetToken,
     PasswordRecoveryService,
 )
 from engipilot_ai.modules.identity.services.refresh import (
@@ -324,3 +328,44 @@ async def forgot_password(
         email=str(payload.email),
     )
     return ForgotPasswordResponse()
+
+
+@router.post(
+    "/reset-password",
+    response_model=ResetPasswordResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Reset password using a recovery token",
+    responses={400: {"description": "Invalid or expired reset token"}},
+)
+async def reset_password(
+    payload: ResetPasswordRequest,
+    response: Response,
+    session: DbSession,
+) -> ResetPasswordResponse:
+    try:
+        await PasswordRecoveryService.reset_password(
+            session,
+            token=payload.token.get_secret_value(),
+            new_password=payload.new_password.get_secret_value(),
+        )
+    except InvalidPasswordResetToken as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        ) from exc
+    except InvalidPasswordResetData as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    response.delete_cookie(
+        key="cp_refresh",
+        path="/api/v1/auth",
+        secure=get_settings().app_env in ("staging", "production"),
+        httponly=True,
+        samesite="lax",
+    )
+    return ResetPasswordResponse()
