@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from engipilot_ai.core.config import get_settings
 from engipilot_ai.core.database import get_db_session
 from engipilot_ai.modules.identity.api.v1.dependencies import AuthClaims
+from engipilot_ai.modules.identity.api.v1.rate_limit import limit_public_auth
 from engipilot_ai.modules.identity.api.v1.schemas.change_password import (
     ChangePasswordRequest,
 )
@@ -83,6 +84,7 @@ DbSession = Annotated[AsyncSession, Depends(get_db_session)]
 
 @router.post(
     "/register",
+    dependencies=[Depends(limit_public_auth)],
     response_model=RegisterResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Register a new customer",
@@ -120,6 +122,7 @@ async def register(
 
 @router.post(
     "/resend-verification",
+    dependencies=[Depends(limit_public_auth)],
     response_model=ResendVerificationResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Resend account verification email",
@@ -138,6 +141,7 @@ async def resend_verification(
 
 @router.post(
     "/verify-email",
+    dependencies=[Depends(limit_public_auth)],
     response_model=VerifyEmailResponse,
     status_code=status.HTTP_200_OK,
     summary="Verify customer email address",
@@ -166,6 +170,7 @@ async def verify_email(
 
 @router.post(
     "/login",
+    dependencies=[Depends(limit_public_auth)],
     response_model=LoginResponse,
     response_model_exclude_none=True,
     status_code=status.HTTP_200_OK,
@@ -333,6 +338,7 @@ async def logout(
 
 @router.post(
     "/forgot-password",
+    dependencies=[Depends(limit_public_auth)],
     response_model=ForgotPasswordResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Request a password reset email",
@@ -350,6 +356,7 @@ async def forgot_password(
 
 @router.post(
     "/reset-password",
+    dependencies=[Depends(limit_public_auth)],
     response_model=ResetPasswordResponse,
     status_code=status.HTTP_200_OK,
     summary="Reset password using a recovery token",
