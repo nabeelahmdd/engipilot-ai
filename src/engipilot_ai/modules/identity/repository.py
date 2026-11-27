@@ -574,7 +574,6 @@ class IdentityRepository:
             select(AuthSession.user_id).where(AuthSession.id == session_id)
         )
 
-
     @staticmethod
     async def increment_auth_rate_bucket(
         session: AsyncSession,
@@ -590,24 +589,21 @@ class IdentityRepository:
             window_started_at=now,
         )
         expired = AuthRateBucket.window_started_at <= cutoff
-        statement = (
-            initial.on_conflict_do_update(
-                index_elements=[AuthRateBucket.bucket_key],
-                set_={
-                    "hits": case(
-                        (expired, 1),
-                        else_=AuthRateBucket.hits + 1,
-                    ),
-                    "window_started_at": case(
-                        (expired, now),
-                        else_=AuthRateBucket.window_started_at,
-                    ),
-                },
-            )
-            .returning(
-                AuthRateBucket.hits,
-                AuthRateBucket.window_started_at,
-            )
+        statement = initial.on_conflict_do_update(
+            index_elements=[AuthRateBucket.bucket_key],
+            set_={
+                "hits": case(
+                    (expired, 1),
+                    else_=AuthRateBucket.hits + 1,
+                ),
+                "window_started_at": case(
+                    (expired, now),
+                    else_=AuthRateBucket.window_started_at,
+                ),
+            },
+        ).returning(
+            AuthRateBucket.hits,
+            AuthRateBucket.window_started_at,
         )
         row = (await session.execute(statement)).one()
         return int(row[0]), row[1]

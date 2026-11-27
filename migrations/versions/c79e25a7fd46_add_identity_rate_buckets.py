@@ -25,12 +25,8 @@ def upgrade() -> None:
             server_default=sa.text("0"),
             nullable=False,
         ),
-        sa.Column(
-            "window_started_at", sa.DateTime(timezone=True), nullable=False
-        ),
-        sa.CheckConstraint(
-            "hits >= 0", name="ck_identity_rate_buckets_hits"
-        ),
+        sa.Column("window_started_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint("hits >= 0", name="ck_identity_rate_buckets_hits"),
         sa.PrimaryKeyConstraint("bucket_key"),
     )
     op.create_index(

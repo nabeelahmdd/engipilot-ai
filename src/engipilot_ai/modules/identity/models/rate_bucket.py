@@ -12,9 +12,7 @@ class AuthRateBucket(Base):
     __tablename__ = "identity_rate_buckets"
 
     bucket_key: Mapped[str] = mapped_column(String(64), primary_key=True)
-    hits: Mapped[int] = mapped_column(
-        Integer, nullable=False, server_default=text("0")
-    )
+    hits: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     window_started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )

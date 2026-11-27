@@ -38,9 +38,7 @@ class AuthRateLimitService:
         cutoff = now - timedelta(seconds=window)
 
         # Avoid storing raw IP addresses in the counter table.
-        fingerprint = hashlib.sha256(
-            f"{endpoint}\0{source_ip}".encode()
-        ).hexdigest()
+        fingerprint = hashlib.sha256(f"{endpoint}\0{source_ip}".encode()).hexdigest()
 
         async with session.begin():
             hits, started = await IdentityRepository.increment_auth_rate_bucket(

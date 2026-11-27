@@ -86,8 +86,7 @@ async def verify_public_rate_limit() -> None:
                         async with session.begin():
                             await session.execute(
                                 update(AuthRateBucket).values(
-                                    window_started_at=utcnow()
-                                    - timedelta(seconds=120)
+                                    window_started_at=utcnow() - timedelta(seconds=120)
                                 )
                             )
                     reset = await client.post(resend, json=payload)
