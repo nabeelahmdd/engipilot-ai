@@ -13,6 +13,8 @@ def test_identity_models_are_registered() -> None:
         "auth_sessions",
         "refresh_credentials",
         "identity_one_time_tokens",
+        "identity_email_outbox",
+        "identity_rate_buckets",
     }
     assert expected_tables == set(Base.metadata.tables)
 

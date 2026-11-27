@@ -13,10 +13,10 @@ from engipilot_ai.modules.identity.passwords import (
     verify_password_async,
     verify_unknown_password_async,
 )
-from engipilot_ai.modules.identity.registration_service import (
+from engipilot_ai.modules.identity.repository import IdentityRepository
+from engipilot_ai.modules.identity.services.registration import (
     normalize_email,
 )
-from engipilot_ai.modules.identity.repository import IdentityRepository
 from engipilot_ai.modules.identity.tokens import (
     digest_secret,
     issue_access_token,

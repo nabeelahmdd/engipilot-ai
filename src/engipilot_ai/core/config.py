@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -46,6 +46,15 @@ class Settings(BaseSettings):
         ge=1,
         le=72,
     )
+    email_outbox_key: SecretStr | None = None
+    password_reset_minutes: int = Field(default=30, ge=5, le=60)
+
+    auth_rate_limit_max_requests: int = Field(default=12, ge=1, le=1000)
+    auth_rate_limit_window_seconds: int = Field(default=60, ge=1, le=3600)
+
+    smtp_host: str = "127.0.0.1"
+    smtp_port: int = Field(default=1025, ge=1, le=65535)
+    smtp_from_address: str = "no-reply@commercepilot.local"
 
 
 @lru_cache

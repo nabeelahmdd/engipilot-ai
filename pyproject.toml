@@ -15,6 +15,7 @@ dependencies = [
   "pwdlib[argon2]>=0.4.2",
   "pyjwt[crypto]>=2.15.1",
   "email-validator>=2.4.0",
+  "cryptography>=50.0.2",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +28,7 @@ dev = [
   "pytest-cov>=5,<8",
   "ruff>=0.11,<1",
   "mypy>=1.15,<2",
+  "pre-commit>=4.7.0",
 ]
 
 [build-system]
